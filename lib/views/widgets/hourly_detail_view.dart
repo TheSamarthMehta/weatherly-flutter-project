@@ -16,11 +16,11 @@ class HourlyDetailView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // ✅ FIX: Increased the size to make the sheet taller and reduce scrolling.
     return DraggableScrollableSheet(
-      initialChildSize: 0.95, // Was 0.8, now it's taller
-      maxChildSize: 0.95,   // Set max size to the same to prevent resizing
-      minChildSize: 0.5,
+      initialChildSize: 0.95,
+      maxChildSize: 0.95,
+      // ✅ FIX: Set min size to initial size to prevent intermediate snapping.
+      minChildSize: 0.95,
       builder: (_, controller) {
         return Container(
           decoration: const BoxDecoration(

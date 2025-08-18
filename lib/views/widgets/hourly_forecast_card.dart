@@ -53,81 +53,92 @@ class _HourlyForecastCardState extends State<HourlyForecastCard> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16.0),
-      decoration: BoxDecoration(
-        color: const Color(0xFF2A2D31),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            "HOURLY WEATHER",
-            style: TextStyle(color: Colors.white.withOpacity(0.7), fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 16),
-          SizedBox(
-            height: 130,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              itemCount: hourlyData.length,
-              itemBuilder: (context, index) {
-                final item = hourlyData[index];
-                final isSelected = _selectedIndex == index;
-                return GestureDetector(
-                  onTap: () => _showHourlyDetails(context, index),
-                  child: Container(
-                    width: 75, // Adjusted width for better spacing
-                    padding: const EdgeInsets.symmetric(vertical: 8.0),
-                    margin: const EdgeInsets.only(right: 12),
-                    decoration: BoxDecoration(
-                      color: isSelected ? Colors.white : Colors.transparent,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.spaceAround,
-                      children: [
-                        Text(
-                          item["time"] as String,
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                            color: isSelected ? Colors.black : Colors.white70,
-                          ),
-                        ),
-                        Icon(
-                          item["icon"] as IconData,
-                          color: const Color(0xFF0095FF), // Specific blue icon color
-                          size: 32,
-                        ),
-                        Text(
-                          "${item["temp"]}°",
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: isSelected ? Colors.black : Colors.white,
-                          ),
-                        ),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(PhosphorIcons.drop(PhosphorIconsStyle.fill), color: isSelected ? Colors.blue.shade300 : const Color(0xFF00BFFF), size: 16),
-                            const SizedBox(width: 4),
-                            Text(
-                              "${item["precipitation"]}%",
-                              style: TextStyle(color: isSelected ? Colors.black54 : Colors.white70, fontWeight: FontWeight.bold),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              },
+    return Card(
+      color: Colors.grey[900],
+      child: Container(
+        padding: const EdgeInsets.all(16.0),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              "HOURLY WEATHER",
+              style: TextStyle(
+                // ✅ FIX: Reduced font size and adjusted color opacity
+                  fontSize: 12,
+                  color: Colors.white.withOpacity(0.6),
+                  fontWeight: FontWeight.bold
+              ),
             ),
-          ),
-        ],
+            // ✅ FIX: Added a divider between the header and the content
+            const Divider(
+              color: Colors.white24,
+              thickness: 1.0,
+              height: 24,
+            ),
+            SizedBox(
+              height: 130,
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                itemCount: hourlyData.length,
+                itemBuilder: (context, index) {
+                  final item = hourlyData[index];
+                  return GestureDetector(
+                    onTap: () => _showHourlyDetails(context, index),
+                    child: Container(
+                      width: 75, // Adjusted width for better spacing
+                      padding: const EdgeInsets.symmetric(vertical: 8.0),
+                      margin: const EdgeInsets.only(right: 12),
+                      decoration: BoxDecoration(
+                        color: Colors.transparent,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.spaceAround,
+                        children: [
+                          Text(
+                            item["time"] as String,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.normal,
+                              color: Colors.white70,
+                            ),
+                          ),
+                          Icon(
+                            item["icon"] as IconData,
+                            color: const Color(0xFF0095FF), // Specific blue icon color
+                            size: 32,
+                          ),
+                          Text(
+                            "${item["temp"]}°",
+                            style: const TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(PhosphorIcons.drop(PhosphorIconsStyle.fill), color: const Color(0xFF00BFFF), size: 16),
+                              const SizedBox(width: 4),
+                              Text(
+                                "${item["precipitation"]}%",
+                                style: const TextStyle(color: Colors.white70, fontWeight: FontWeight.bold),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
