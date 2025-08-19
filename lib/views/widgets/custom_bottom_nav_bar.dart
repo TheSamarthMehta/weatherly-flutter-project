@@ -1,3 +1,5 @@
+// lib/views/widgets/custom_bottom_nav_bar.dart
+
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
@@ -31,18 +33,23 @@ class CustomBottomNavBar extends StatelessWidget {
               borderRadius: BorderRadius.circular(20),
               border: Border.all(color: Colors.white.withOpacity(0.2)),
             ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: List.generate(navItems.length, (index) {
-                return _buildNavItem(
-                  context,
-                  Provider.of<HomeController>(context, listen: true),
-                  navItems[index]["icon"] as IconData,
-                  navItems[index]["selectedIcon"] as IconData,
-                  index,
-                  navItems[index]["label"] as String,
+            // Use a Consumer to listen for changes from HomeController.
+            child: Consumer<HomeController>(
+              builder: (context, controller, child) {
+                return Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: List.generate(navItems.length, (index) {
+                    return _buildNavItem(
+                      context,
+                      controller,
+                      navItems[index]["icon"] as IconData,
+                      navItems[index]["selectedIcon"] as IconData,
+                      index,
+                      navItems[index]["label"] as String,
+                    );
+                  }),
                 );
-              }),
+              },
             ),
           ),
         ),
@@ -51,6 +58,7 @@ class CustomBottomNavBar extends StatelessWidget {
   }
 
   Widget _buildNavItem(BuildContext context, HomeController controller, IconData icon, IconData selectedIcon, int index, String label) {
+    // ✅ FIX: Removed the '.value' which is not part of the Provider package.
     final bool isSelected = controller.selectedIndex == index;
 
     return Expanded(
@@ -65,7 +73,6 @@ class CustomBottomNavBar extends StatelessWidget {
               curve: Curves.easeOut,
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                // UI CHANGE: The background is now transparent with a conditional border
                 color: Colors.transparent,
                 border: isSelected
                     ? Border.all(color: Colors.white.withOpacity(0.4), width: 1.0)
