@@ -5,8 +5,7 @@ import 'views/home_screen.dart';
 
 void main() {
   runApp(
-    // ✅ FIX: The Provider must be an ancestor of MaterialApp.
-    // This makes the HomeController available to all routes and screens.
+    // The Provider is now at the top of the widget tree
     ChangeNotifierProvider(
       create: (context) => HomeController(),
       child: const MyApp(),

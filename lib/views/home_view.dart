@@ -1,6 +1,8 @@
 // lib/views/home_view.dart
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../controllers/home_controller.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:weatherly/views/widgets/current_weather_card.dart';
 import 'package:weatherly/views/widgets/tonights_weather_card.dart';
@@ -12,47 +14,65 @@ import 'package:weatherly/views/widgets/air_quality_card.dart';
 import 'package:weatherly/views/widgets/health_outlook_card.dart';
 import 'package:weatherly/views/widgets/sun_and_moon_card.dart';
 
-// This widget contains the main scrollable content for the "Home" tab.
 class HomeView extends StatelessWidget {
   const HomeView({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return CustomScrollView(
-      slivers: [
-        _buildSliverAppBar(),
-        _StickyLocationBarDelegate.asSliver(),
-        SliverList(
-          delegate: SliverChildListDelegate(
-            const [
-              Padding(
-                padding: EdgeInsets.all(16.0),
-                child: Column(
-                  children: [
-                    CurrentWeatherCard(),
-                    SizedBox(height: 16),
-                    TonightsWeatherCard(),
-                    SizedBox(height: 16),
-                    AiSuggestionCard(),
-                    SizedBox(height: 16),
-                    WeatherRadarCard(),
-                    SizedBox(height: 16),
-                    HourlyForecastCard(),
-                    SizedBox(height: 16),
-                    SevenDayForecastCard(),
-                    SizedBox(height: 16),
-                    AirQualityCard(),
-                    SizedBox(height: 16),
-                    HealthOutlookCard(),
-                    SizedBox(height: 16),
-                    SunAndMoonCard(),
-                  ],
-                ),
+    return Consumer<HomeController>(
+      builder: (context, controller, child) {
+        if (controller.isLoading) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        if (controller.errorMessage != null) {
+          return Center(
+              child: Text('Error: ${controller.errorMessage}',
+                  style: const TextStyle(color: Colors.red)));
+        }
+
+        if (controller.weatherData == null) {
+          return const Center(child: Text('No weather data available.'));
+        }
+
+        final weather = controller.weatherData!;
+        return CustomScrollView(
+          slivers: [
+            _buildSliverAppBar(),
+            _StickyLocationBarDelegate.asSliver(weather.cityName),
+            SliverList(
+              delegate: SliverChildListDelegate(
+                [
+                  Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      children: [
+                        CurrentWeatherCard(weatherData: weather),
+                        const SizedBox(height: 16),
+                        TonightsWeatherCard(weatherData: weather),
+                        const SizedBox(height: 16),
+                        AiSuggestionCard(condition: weather.mainCondition),
+                        const SizedBox(height: 16),
+                        const WeatherRadarCard(),
+                        const SizedBox(height: 16),
+                        const HourlyForecastCard(),
+                        const SizedBox(height: 16),
+                        const SevenDayForecastCard(),
+                        const SizedBox(height: 16),
+                        const AirQualityCard(),
+                        const SizedBox(height: 16),
+                        const HealthOutlookCard(),
+                        const SizedBox(height: 16),
+                        SunAndMoonCard(weatherData: weather),
+                      ],
+                    ),
+                  ),
+                ],
               ),
-            ],
-          ),
-        ),
-      ],
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -63,45 +83,34 @@ class HomeView extends StatelessWidget {
       centerTitle: false,
       title: Row(
         children: [
-          Icon(
-            PhosphorIcons.cloud(PhosphorIconsStyle.fill),
-            color: const Color(0xFF00C3FF),
-            size: 32,
-          ),
+          Icon(PhosphorIcons.cloud(PhosphorIconsStyle.fill),
+              color: const Color(0xFF00C3FF), size: 32),
           const SizedBox(width: 8),
-          const Text(
-            'Weatherly',
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 24,
-              color: Colors.white,
-            ),
-          ),
+          const Text('Weatherly',
+              style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 24,
+                  color: Colors.white)),
         ],
       ),
       actions: [
         IconButton(
-          icon: Icon(
-            PhosphorIcons.user(PhosphorIconsStyle.regular),
-            color: Colors.white,
-            size: 28,
-          ),
-          onPressed: () {},
-        ),
+            icon: Icon(PhosphorIcons.user(PhosphorIconsStyle.regular),
+                color: Colors.white, size: 28),
+            onPressed: () {}),
         IconButton(
-          icon: Icon(
-            PhosphorIcons.list(PhosphorIconsStyle.regular),
-            color: Colors.white,
-            size: 28,
-          ),
-          onPressed: () {},
-        ),
+            icon: Icon(PhosphorIcons.list(PhosphorIconsStyle.regular),
+                color: Colors.white, size: 28),
+            onPressed: () {}),
       ],
     );
   }
 }
 
 class _StickyLocationBarDelegate extends SliverPersistentHeaderDelegate {
+  final String cityName;
+  _StickyLocationBarDelegate(this.cityName);
+
   @override
   Widget build(
       BuildContext context, double shrinkOffset, bool overlapsContent) {
@@ -118,15 +127,13 @@ class _StickyLocationBarDelegate extends SliverPersistentHeaderDelegate {
               borderRadius: BorderRadius.circular(30.0),
               border: Border.all(color: Colors.grey[800]!, width: 1),
             ),
-            child: const Row(
+            child: Row(
               children: [
-                Icon(Icons.location_on_outlined,
+                const Icon(Icons.location_on_outlined,
                     color: Colors.white70, size: 20),
-                SizedBox(width: 12),
-                Text(
-                  'Rajkot, Gujarat',
-                  style: TextStyle(color: Colors.white, fontSize: 16),
-                ),
+                const SizedBox(width: 12),
+                Text(cityName,
+                    style: const TextStyle(color: Colors.white, fontSize: 16)),
               ],
             ),
           ),
@@ -137,16 +144,13 @@ class _StickyLocationBarDelegate extends SliverPersistentHeaderDelegate {
 
   @override
   double get maxExtent => 70.0;
-
   @override
   double get minExtent => 70.0;
-
   @override
-  bool shouldRebuild(covariant SliverPersistentHeaderDelegate oldDelegate) =>
-      false;
+  bool shouldRebuild(covariant SliverPersistentHeaderDelegate oldDelegate) => false;
 
-  static SliverPersistentHeader asSliver() {
+  static SliverPersistentHeader asSliver(String cityName) {
     return SliverPersistentHeader(
-        pinned: true, delegate: _StickyLocationBarDelegate());
+        pinned: true, delegate: _StickyLocationBarDelegate(cityName));
   }
 }

@@ -3,29 +3,32 @@
 import 'package:flutter/material.dart';
 
 class AiSuggestionCard extends StatelessWidget {
-  const AiSuggestionCard({super.key});
+  // ✅ ADDED: condition parameter
+  final String condition;
+  const AiSuggestionCard({super.key, required this.condition});
 
   @override
   Widget build(BuildContext context) {
     return Card(
       color: Colors.deepPurple.shade900,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: const Padding(
-        padding: EdgeInsets.all(16.0),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
+            const Text(
               "AI Suggestions",
               style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
             ),
-            SizedBox(height: 10),
+            const SizedBox(height: 10),
+            // ✅ DYNAMIC: Show suggestion based on condition
             Text(
-              "Based on the cloudy weather, here are some suggestions for your evening:",
-              style: TextStyle(color: Colors.white70, fontSize: 16),
+              "Based on the forecast of '$condition', here are some suggestions for your evening:",
+              style: const TextStyle(color: Colors.white70, fontSize: 16),
             ),
-            SizedBox(height: 15),
-            Row(
+            const SizedBox(height: 15),
+            const Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
                 Column(

@@ -1,11 +1,31 @@
+// lib/views/widgets/sun_and_moon_card.dart
+
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
+import 'package:weatherly/models/weather_data_model.dart';
 
 class SunAndMoonCard extends StatelessWidget {
-  const SunAndMoonCard({super.key});
+  // ✅ ADDED: weatherData parameter
+  final WeatherData weatherData;
+  const SunAndMoonCard({super.key, required this.weatherData});
+
+  // Helper to format UNIX timestamp to a readable time string
+  String _formatTime(int timestamp) {
+    final dateTime = DateTime.fromMillisecondsSinceEpoch(timestamp * 1000);
+    return DateFormat('h:mm a').format(dateTime);
+  }
 
   @override
   Widget build(BuildContext context) {
+    // Calculate daylight duration
+    final sunrise = DateTime.fromMillisecondsSinceEpoch(weatherData.sunrise * 1000);
+    final sunset = DateTime.fromMillisecondsSinceEpoch(weatherData.sunset * 1000);
+    final dayDuration = sunset.difference(sunrise);
+    final hours = dayDuration.inHours;
+    final minutes = dayDuration.inMinutes.remainder(60);
+    final dayLength = "$hours hrs $minutes mins";
+
     return Card(
       color: Colors.grey[900],
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -14,7 +34,6 @@ class SunAndMoonCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Card Title
             Text(
               "SUN & MOON",
               style: TextStyle(
@@ -24,24 +43,21 @@ class SunAndMoonCard extends StatelessWidget {
                 fontSize: 12,
               ),
             ),
-            const Divider(),
-
-            // Sun Information Row
+            const Divider(height: 25),
             _buildInfoRow(
               icon: PhosphorIcons.sun(PhosphorIconsStyle.regular),
-              title: "12 hrs 51 mins",
-              subtitle: "", // Sun doesn't have a phase name
-              riseTime: "6:25 AM",
-              setTime: "7:16 PM",
+              // ✅ DYNAMIC: Show calculated day length
+              title: dayLength,
+              subtitle: "",
+              // ✅ DYNAMIC: Show sunrise and sunset times
+              riseTime: _formatTime(weatherData.sunrise),
+              setTime: _formatTime(weatherData.sunset),
             ),
-
-            // Divider between Sun and Moon sections
             Divider(
               color: Colors.white.withOpacity(0.2),
               height: 30,
             ),
-
-            // Moon Information Row
+            // Moon data can be added here from a different API if needed
             _buildInfoRow(
               icon: PhosphorIcons.moon(PhosphorIconsStyle.regular),
               title: "14 hrs 16 mins",
@@ -55,7 +71,6 @@ class SunAndMoonCard extends StatelessWidget {
     );
   }
 
-  // ✅ EDITED: This is a completely new widget to build the layout from your screenshot.
   Widget _buildInfoRow({
     required IconData icon,
     required String title,
@@ -66,9 +81,8 @@ class SunAndMoonCard extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        // Left side: Icon and Title/Subtitle
         Expanded(
-          flex: 4, // Gives more space to the left side
+          flex: 4,
           child: Row(
             children: [
               Icon(icon, color: Colors.white, size: 48),
@@ -99,8 +113,6 @@ class SunAndMoonCard extends StatelessWidget {
             ],
           ),
         ),
-
-        // Center: Vertical Divider
         SizedBox(
           height: 40,
           child: VerticalDivider(
@@ -109,10 +121,8 @@ class SunAndMoonCard extends StatelessWidget {
             thickness: 1,
           ),
         ),
-
-        // Right side: Rise and Set times
         Expanded(
-          flex: 2, // Gives less space to the right side
+          flex: 2,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [

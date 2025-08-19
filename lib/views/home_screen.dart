@@ -2,10 +2,6 @@
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:weatherly/views/ai_screen.dart';
-import 'package:weatherly/views/daily_screen.dart';
-import 'package:weatherly/views/hourly_screen.dart';
-import 'package:weatherly/views/radar_screen.dart';
 import '../controllers/home_controller.dart';
 import 'widgets/custom_bottom_nav_bar.dart';
 import 'home_view.dart';
@@ -15,8 +11,6 @@ class HomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // ✅ FIX: We can now safely access the controller here without a Consumer.
-    // 'listen: false' is used because this widget itself doesn't need to rebuild on changes.
     final controller = Provider.of<HomeController>(context, listen: false);
 
     return Scaffold(
@@ -26,11 +20,11 @@ class HomeScreen extends StatelessWidget {
         controller: controller.pageController,
         onPageChanged: controller.onPageChanged,
         children: const <Widget>[
-          HomeScreen(),
-          HourlyScreen(),
-          DailyScreen(),
-          RadarScreen(),
-          AiScreen(),
+          HomeView(), // This correctly points to your home content
+          Center(child: Text('Hourly View', style: TextStyle(color: Colors.white))),
+          Center(child: Text('Daily View', style: TextStyle(color: Colors.white))),
+          Center(child: Text('Radar View', style: TextStyle(color: Colors.white))),
+          Center(child: Text('AI View', style: TextStyle(color: Colors.white))),
         ],
       ),
     );

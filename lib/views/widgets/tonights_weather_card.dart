@@ -1,10 +1,14 @@
 // lib/views/widgets/tonights_weather_card.dart
 
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
+import 'package:weatherly/models/weather_data_model.dart';
 
 class TonightsWeatherCard extends StatelessWidget {
-  const TonightsWeatherCard({super.key});
+  // ✅ ADDED: weatherData parameter
+  final WeatherData weatherData;
+  const TonightsWeatherCard({super.key, required this.weatherData});
 
   @override
   Widget build(BuildContext context) {
@@ -16,7 +20,6 @@ class TonightsWeatherCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Top row: Title and date
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -28,9 +31,10 @@ class TonightsWeatherCard extends StatelessWidget {
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                const Text(
-                  "THU, AUG 14",
-                  style: TextStyle(
+                // ✅ DYNAMIC: Show today's date
+                Text(
+                  DateFormat('E, MMM d').format(DateTime.now()).toUpperCase(),
+                  style: const TextStyle(
                     color: Colors.white,
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
@@ -38,84 +42,57 @@ class TonightsWeatherCard extends StatelessWidget {
                 ),
               ],
             ),
-
-            // Divider like the screenshot
-            Divider(
+            const Divider(
               color: Colors.white24,
               thickness: 0.5,
               height: 24,
             ),
-
-            // Low temp
             Row(
               children: [
-                Text(
+                const Text(
                   "Low ",
                   style: TextStyle(
                     color: Colors.white70,
                     fontSize: 16,
                   ),
                 ),
-                const Text(
-                  "79°",
-                  style: TextStyle(
+                // ✅ DYNAMIC: Show low temp
+                Text(
+                  "${weatherData.tempMin.round()}°",
+                  style: const TextStyle(
                     color: Colors.white,
                     fontSize: 28,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                const SizedBox(width: 8),
-                Icon(
-                  PhosphorIcons.cloud(PhosphorIconsStyle.fill),
-                  color: Colors.white70,
-                  size: 28,
-                ),
               ],
             ),
-            const SizedBox(height: 4),
-            const Text(
-              "Cloudy",
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 16,
-              ),
-            ),
-
             const SizedBox(height: 16),
-
-            // High temp
             Row(
               children: [
-                Text(
+                const Text(
                   "High ",
                   style: TextStyle(
                     color: Colors.white70,
                     fontSize: 16,
                   ),
                 ),
-                const Text(
-                  "90°",
-                  style: TextStyle(
+                // ✅ DYNAMIC: Show high temp
+                Text(
+                  "${weatherData.tempMax.round()}°",
+                  style: const TextStyle(
                     color: Colors.white,
                     fontSize: 28,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                const SizedBox(width: 8),
-                Icon(
-                  PhosphorIcons.cloudRain(PhosphorIconsStyle.fill),
-                  color: Colors.blue[300],
-                  size: 28,
-                ),
               ],
             ),
-
             const SizedBox(height: 12),
-
-            // Tomorrow forecast
-            const Text(
-              "Tomorrow: Cloudy with a passing shower or two in the afternoon",
-              style: TextStyle(
+            // ✅ DYNAMIC: Show weather description
+            Text(
+              "Today: ${weatherData.description}.",
+              style: const TextStyle(
                 color: Colors.white,
                 fontSize: 16,
               ),
