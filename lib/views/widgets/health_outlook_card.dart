@@ -10,7 +10,6 @@ class HealthOutlookCard extends StatefulWidget {
 }
 
 class _HealthOutlookCardState extends State<HealthOutlookCard> {
-  late final PageController _pageController;
   DateTime _selectedDate = DateTime.now();
   int _currentPage = 0;
 
@@ -42,18 +41,43 @@ class _HealthOutlookCardState extends State<HealthOutlookCard> {
         {"icon": PhosphorIcons.car(), "label": "Driving", "level": "Fair", "color": Colors.yellow},
       ]
     },
+    {
+      "title": "10-DAY HOME & GARDEN OUTLOOK",
+      "conditions": [
+        {"icon": PhosphorIcons.flower(), "label": "Lawn Mowing", "level": "Poor", "color": Colors.red},
+        {"icon": PhosphorIcons.tree(), "label": "Composting", "level": "Great", "color": Colors.green},
+        {"icon": PhosphorIcons.sun(), "label": "Entertaining", "level": "Good", "color": Colors.green},
+      ]
+    },
+    {
+      "title": "10-DAY PESTS OUTLOOK",
+      "conditions": [
+        {"icon": PhosphorIcons.bug(), "label": "Mosquito Activity", "level": "Extreme", "color": Colors.red},
+        {"icon": PhosphorIcons.bugBeetle(), "label": "Indoor Pest", "level": "Very High", "color": Colors.red},
+        {"icon": PhosphorIcons.bugBeetle(), "label": "Outdoor Pest", "level": "Extreme", "color": Colors.red},
+      ]
+    },
+    {
+      "title": "10-DAY ALLERGIES OUTLOOK",
+      "conditions": [
+        {"icon": PhosphorIcons.flower(), "label": "Dust & Dander", "level": "Extreme", "color": Colors.red},
+      ]
+    },
   ];
 
-  @override
-  void initState() {
-    super.initState();
-    _pageController = PageController(viewportFraction: 0.98);
-  }
+  void _onSwipe(DragEndDetails details) {
+    if (details.primaryVelocity == 0) return;
+    if (details.primaryVelocity!.abs() < 200) return;
 
-  @override
-  void dispose() {
-    _pageController.dispose();
-    super.dispose();
+    int newPage = _currentPage;
+    if (details.primaryVelocity! < 0) {
+      newPage = (_currentPage + 1).clamp(0, outlookData.length - 1);
+    } else {
+      newPage = (_currentPage - 1).clamp(0, outlookData.length - 1);
+    }
+    setState(() {
+      _currentPage = newPage;
+    });
   }
 
   @override
@@ -63,140 +87,165 @@ class _HealthOutlookCardState extends State<HealthOutlookCard> {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
       elevation: 10,
       shadowColor: Colors.black.withOpacity(0.3),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 18.0, vertical: 18.0),
-        child: Column(
-          children: [
-            SizedBox(
-              height: 380,
-              child: PageView.builder(
-                controller: _pageController,
-                itemCount: outlookData.length,
-                onPageChanged: (index) =>
-                    setState(() => _currentPage = index),
-                itemBuilder: (context, index) => AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 400),
-                  child: _buildOutlookPage(outlookData[index]),
+      child: GestureDetector(
+        onHorizontalDragEnd: _onSwipe,
+        child: Padding(
+          padding: const EdgeInsets.all(18.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                outlookData[_currentPage]['title'],
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.white.withOpacity(0.8),
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 1.2,
                 ),
               ),
-            ),
-            const SizedBox(height: 8),
-            _buildPageIndicator(),
-          ],
+              const Divider(),
+              _buildCalendar(),
+              const SizedBox(height: 16),
+              _buildRiskLevelBar(),
+              const SizedBox(height: 18),
+              AnimatedSwitcher(
+                duration: const Duration(milliseconds: 300),
+                child: _buildConditionsList(
+                  key: ValueKey<int>(_currentPage),
+                  conditions: outlookData[_currentPage]['conditions'],
+                ),
+              ),
+              const SizedBox(height: 8),
+              _buildPageIndicator(),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildOutlookPage(Map<String, dynamic> pageData) {
+  Widget _buildConditionsList({Key? key, required List<dynamic> conditions}) {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          pageData['title'],
-          style: TextStyle(
-            fontSize: 15,
-            color: Colors.white.withOpacity(0.8),
-            fontWeight: FontWeight.w600,
-            letterSpacing: 1.2,
-          ),
-        ),
-        const SizedBox(height: 14),
-        _buildCalendar(),
-        const SizedBox(height: 16),
-        _buildRiskLevelBar(),
-        const SizedBox(height: 18),
-        // Scrollable condition list to avoid overflow
-        Container(
-          height: 155, // Change as needed, fits 4-5 items before scrolling
-          child: ListView.separated(
-            physics: const BouncingScrollPhysics(),
-            itemCount: (pageData['conditions'] as List).length,
-            separatorBuilder: (_, __) =>
-                Divider(color: Colors.white.withOpacity(0.09), height: 1),
-            itemBuilder: (context, index) =>
-                _buildConditionRow(pageData['conditions'][index]),
-          ),
-        ),
-      ],
+      key: key,
+      children: conditions
+          .map((condition) => Column(
+        children: [
+          _buildConditionRow(condition),
+          if (conditions.last != condition)
+            Divider(color: Colors.white.withOpacity(0.09), height: 1),
+        ],
+      ))
+          .toList(),
     );
   }
 
   Widget _buildCalendar() {
-    return SizedBox(
-      height: 80,
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        itemCount: 10,
-        itemBuilder: (context, index) {
-          final date = DateTime.now().add(Duration(days: index));
-          final isToday = date.day == DateTime.now().day && date.month == DateTime.now().month;
-          final isSelected = date.day == _selectedDate.day && date.month == _selectedDate.month;
+    final dayHeaders = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    final today = DateTime.now();
+    final startOfWeek = today.subtract(Duration(days: today.weekday % 7));
 
-          return GestureDetector(
-            onTap: () => setState(() => _selectedDate = date),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 260),
-              margin: const EdgeInsets.symmetric(horizontal: 6),
-              width: 54,
-              decoration: BoxDecoration(
-                color: isSelected ? Colors.blueAccent : Colors.grey[850],
-                borderRadius: BorderRadius.circular(14),
-                border: isToday ? Border.all(color: Colors.blueAccent, width: 2) : null,
-              ),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    DateFormat('E').format(date).substring(0, 3).toUpperCase(),
-                    style: TextStyle(
-                      color: Colors.white.withOpacity(0.78),
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
+    return Column(
+      children: [
+        Row(
+          children: dayHeaders
+              .map((day) => Expanded(
+            child: Text(
+              day,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                  color: Colors.white70,
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold),
+            ),
+          ))
+              .toList(),
+        ),
+        const SizedBox(height: 4),
+        GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 7,
+            childAspectRatio: 1.2,
+            crossAxisSpacing: 6,
+            mainAxisSpacing: 6,
+          ),
+          itemCount: 14,
+          itemBuilder: (context, index) {
+            final date = startOfWeek.add(Duration(days: index));
+            final isSelected = date.day == _selectedDate.day &&
+                date.month == _selectedDate.month &&
+                date.year == _selectedDate.year;
+
+            final isEnabled = date.isBefore(today.add(const Duration(days: 10)));
+
+            Color bgColor;
+            Color textColor;
+
+            if (isSelected) {
+              bgColor = Colors.white;
+              textColor = Colors.black;
+            } else if (isEnabled) {
+              bgColor = const Color(0xFF009688);
+              textColor = Colors.white;
+            } else {
+              bgColor = Colors.grey.shade800;
+              textColor = Colors.grey.shade500;
+            }
+
+            return GestureDetector(
+              onTap: isEnabled ? () => setState(() => _selectedDate = date) : null,
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 260),
+                decoration: BoxDecoration(
+                  color: bgColor,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Center(
+                  child: Text(
                     DateFormat('d').format(date),
                     style: TextStyle(
-                      fontSize: 17,
+                      fontSize: 16,
                       fontWeight: FontWeight.bold,
-                      color: isSelected ? Colors.white : Colors.white70,
+                      color: textColor,
                     ),
                   ),
-                ],
+                ),
               ),
-            ),
-          );
-        },
-      ),
+            );
+          },
+        ),
+      ],
     );
   }
 
   Widget _buildRiskLevelBar() {
-    return Column(
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: const [
-            Text("LOW", style: TextStyle(color: Colors.white70, fontSize: 12)),
-            Text("EXTREME", style: TextStyle(color: Colors.white70, fontSize: 12)),
-          ],
-        ),
-        const SizedBox(height: 8),
-        Container(
-          height: 12,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(9),
-            gradient: const LinearGradient(
-              colors: [Colors.green, Colors.yellow, Colors.orange, Colors.red],
-            ),
-            boxShadow: [
-              BoxShadow(color: Colors.black26, blurRadius: 4, offset: Offset(0, 1))
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 40.0),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: const [
+              Text("LOW", style: TextStyle(color: Colors.white70, fontSize: 12)),
+              Text("EXTREME", style: TextStyle(color: Colors.white70, fontSize: 12)),
             ],
           ),
-        ),
-      ],
+          const SizedBox(height: 8),
+          Container(
+            height: 12,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(9),
+              gradient: const LinearGradient(
+                colors: [Colors.green, Colors.yellow, Colors.orange, Colors.red],
+              ),
+              boxShadow: [
+                BoxShadow(color: Colors.black26, blurRadius: 4, offset: Offset(0, 1))
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
