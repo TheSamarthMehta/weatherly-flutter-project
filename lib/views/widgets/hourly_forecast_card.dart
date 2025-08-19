@@ -55,10 +55,11 @@ class _HourlyForecastCardState extends State<HourlyForecastCard> {
   Widget build(BuildContext context) {
     return Card(
       color: Colors.grey[900],
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Container(
         padding: const EdgeInsets.all(16.0),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(16),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -93,7 +94,7 @@ class _HourlyForecastCardState extends State<HourlyForecastCard> {
                       margin: const EdgeInsets.only(right: 12),
                       decoration: BoxDecoration(
                         color: Colors.transparent,
-                        borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(12),
                       ),
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.spaceAround,

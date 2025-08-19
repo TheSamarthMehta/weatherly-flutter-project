@@ -1,5 +1,3 @@
-// lib/views/widgets/seven_day_forecast_card.dart
-
 import 'package:flutter/material.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'dart:math';
@@ -52,30 +50,30 @@ class _SevenDayForecastCardState extends State<SevenDayForecastCard> {
       }
     },
     {
-      "day": "Today", "date": "8/18", "icon": PhosphorIcons.cloudLightning(PhosphorIconsStyle.fill),
-      "high": 87, "low": 78, "precipitation": 58,
+      "day": "Mon", "date": "8/22", "icon": PhosphorIcons.cloud(PhosphorIconsStyle.fill),
+      "high": 88, "low": 77, "precipitation": 45,
       "details": {
-        "forecast": "Mostly cloudy and humid with a couple of thunderstorms.",
-        "day": {"icon": PhosphorIcons.cloudLightning(PhosphorIconsStyle.fill), "condition": "Thunderstorms", "precipitation": 58},
-        "night": {"icon": PhosphorIcons.cloudMoon(PhosphorIconsStyle.fill), "condition": "Mostly Cloudy", "precipitation": 25},
+        "forecast": "Partly cloudy.",
+        "day": {"icon": PhosphorIcons.cloudSun(PhosphorIconsStyle.fill), "condition": "Partly Cloudy", "precipitation": 45},
+        "night": {"icon": PhosphorIcons.cloudMoon(PhosphorIconsStyle.fill), "condition": "Partly Cloudy", "precipitation": 20},
       }
     },
     {
-      "day": "Today", "date": "8/18", "icon": PhosphorIcons.cloudLightning(PhosphorIconsStyle.fill),
-      "high": 87, "low": 78, "precipitation": 58,
+      "day": "Tue", "date": "8/23", "icon": PhosphorIcons.wind(PhosphorIconsStyle.fill),
+      "high": 90, "low": 80, "precipitation": 15,
       "details": {
-        "forecast": "Mostly cloudy and humid with a couple of thunderstorms.",
-        "day": {"icon": PhosphorIcons.cloudLightning(PhosphorIconsStyle.fill), "condition": "Thunderstorms", "precipitation": 58},
-        "night": {"icon": PhosphorIcons.cloudMoon(PhosphorIconsStyle.fill), "condition": "Mostly Cloudy", "precipitation": 25},
+        "forecast": "Windy and warm.",
+        "day": {"icon": PhosphorIcons.sun(PhosphorIconsStyle.fill), "condition": "Sunny", "precipitation": 15},
+        "night": {"icon": PhosphorIcons.moon(PhosphorIconsStyle.fill), "condition": "Clear", "precipitation": 10},
       }
     },
     {
-      "day": "Today", "date": "8/18", "icon": PhosphorIcons.cloudLightning(PhosphorIconsStyle.fill),
-      "high": 87, "low": 78, "precipitation": 58,
+      "day": "Wed", "date": "8/24", "icon": PhosphorIcons.cloudFog(PhosphorIconsStyle.fill),
+      "high": 84, "low": 75, "precipitation": 30,
       "details": {
-        "forecast": "Mostly cloudy and humid with a couple of thunderstorms.",
-        "day": {"icon": PhosphorIcons.cloudLightning(PhosphorIconsStyle.fill), "condition": "Thunderstorms", "precipitation": 58},
-        "night": {"icon": PhosphorIcons.cloudMoon(PhosphorIconsStyle.fill), "condition": "Mostly Cloudy", "precipitation": 25},
+        "forecast": "Morning fog, then clearing.",
+        "day": {"icon": PhosphorIcons.cloudFog(PhosphorIconsStyle.fill), "condition": "Foggy", "precipitation": 30},
+        "night": {"icon": PhosphorIcons.moon(PhosphorIconsStyle.fill), "condition": "Clear", "precipitation": 15},
       }
     },
   ];
@@ -84,7 +82,7 @@ class _SevenDayForecastCardState extends State<SevenDayForecastCard> {
   Widget build(BuildContext context) {
     return Card(
       color: Colors.grey[900],
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -98,7 +96,12 @@ class _SevenDayForecastCardState extends State<SevenDayForecastCard> {
                 fontWeight: FontWeight.bold,
               ),
             ),
-            const Divider(color: Colors.white24, thickness: 0.5, height: 24),
+            const Divider(
+              color: Colors.white24,
+              thickness: 1.0,
+              height: 32,
+            ),
+            // No extra SizedBox - header and Divider right up against forecast
             ListView.builder(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
@@ -118,6 +121,9 @@ class _SevenDayForecastCardState extends State<SevenDayForecastCard> {
     final int minWeekTemp = forecastData.map<int>((d) => d['low']).reduce(min);
     final int maxWeekTemp = forecastData.map<int>((d) => d['high']).reduce(max);
 
+    double topPadding = (index == 0) ? 0.0 : 10.0;
+
+
     return GestureDetector(
       onTap: () {
         setState(() {
@@ -130,19 +136,19 @@ class _SevenDayForecastCardState extends State<SevenDayForecastCard> {
         child: Column(
           children: [
             Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8.0),
+              padding: EdgeInsets.only(top: topPadding, bottom: 10.0), // Tight vertical padding for compact look
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Expanded(
-                      flex: 3,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(data['day'], style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w500)),
-                          Text(data['date'], style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 14)),
-                        ],
-                      )
+                    flex: 3,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(data['day'], style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w500)),
+                        Text(data['date'], style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 14)),
+                      ],
+                    ),
                   ),
                   Expanded(flex: 2, child: Icon(data['icon'] as IconData, color: Colors.white, size: 28)),
                   Expanded(flex: 2, child: Text("${data['low']}°", style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 16))),
@@ -163,9 +169,8 @@ class _SevenDayForecastCardState extends State<SevenDayForecastCard> {
               ),
             ),
             if (isSelected) _buildExpandedView(data['details']),
-            // ✅ FIX: The divider is now only shown if the item is not the last one.
             if (index < forecastData.length - 1)
-              const Divider(color: Colors.white24, thickness: 0.5, height: 1),
+              const Divider(color: Colors.white24, thickness: 0.5, height: 0.5), // thin divider, small height
           ],
         ),
       ),
@@ -185,7 +190,7 @@ class _SevenDayForecastCardState extends State<SevenDayForecastCard> {
       child: Container(
         height: 6,
         decoration: BoxDecoration(
-          color: Colors.grey[700],
+          color: Colors.grey[900],
           borderRadius: BorderRadius.circular(3),
         ),
         child: Stack(
@@ -215,7 +220,7 @@ class _SevenDayForecastCardState extends State<SevenDayForecastCard> {
 
   Widget _buildExpandedView(Map<String, dynamic> details) {
     return Padding(
-      padding: const EdgeInsets.only(top: 16.0),
+      padding: const EdgeInsets.only(top: 8.0),  // Reduced padding for expanded content
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -223,7 +228,7 @@ class _SevenDayForecastCardState extends State<SevenDayForecastCard> {
             details['forecast'],
             style: const TextStyle(color: Colors.white, fontSize: 14),
           ),
-          const Divider(color: Colors.white24, thickness: 0.5, height: 24),
+          const Divider(color: Colors.white24, thickness: 0.5, height: 16),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [

@@ -97,132 +97,105 @@ class _AirQualityCardState extends State<AirQualityCard>
     });
   }
 
-  Color _getAQIColor(int aqi) {
-    if (aqi <= 50) return Colors.green;
-    if (aqi <= 100) return Colors.yellow;
-    if (aqi <= 200) return Colors.orange;
-    if (aqi <= 300) return Colors.red;
-    return Colors.purple;
-  }
-
   @override
   Widget build(BuildContext context) {
     final currentAqi = aqiData[_currentIndex];
 
-    return Card(
-      color: Colors.grey[900],
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      elevation: 6,
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(20),
       child: Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.3),
-              blurRadius: 12,
-              offset: const Offset(0, 6),
+        color: const Color(0xFF212121), // Fixed grey[900] background
+        padding: const EdgeInsets.all(18.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            /// Title + Mode Switch
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  "24-HOUR AIR QUALITY INDEX",
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.white.withOpacity(0.8),
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 1.2,
+                  ),
+                ),
+                IconButton(
+                  onPressed: () {
+                    setState(() {
+                      _viewMode = (_viewMode + 1) % 3;
+                    });
+                  },
+                  icon: Icon(Icons.layers, color: Colors.white.withOpacity(0.9)),
+                  splashColor: Colors.transparent,
+                  highlightColor: Colors.transparent,
+                ),
+              ],
             ),
-          ],
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(20),
-          child: BackdropFilter(
-            filter: ui.ImageFilter.blur(sigmaX: 16, sigmaY: 16),
-            child: Padding(
-              padding: const EdgeInsets.all(18.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  /// Title + Mode Switch
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        "24-HOUR AIR QUALITY INDEX",
-                        style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.white.withOpacity(0.8),
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 1.2),
-                      ),
-                      IconButton(
-                        onPressed: () {
-                          setState(() {
-                            _viewMode = (_viewMode + 1) % 3;
-                          });
-                        },
-                        icon: Icon(
-                          Icons.layers,
-                          color: Colors.white.withOpacity(0.8),
-                        ),
-                      )
-                    ],
+            const Divider(),
+
+            /// AQI Value + Time
+            Row(
+              children: [
+                Text(
+                  currentAqi['time'],
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
                   ),
-                  const SizedBox(height: 16),
-
-                  /// AQI Value + Time
-                  Row(
-                    children: [
-                      Text(
-                        currentAqi['time'],
-                        style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 28,
-                            fontWeight: FontWeight.bold),
-                      ),
-                      const SizedBox(width: 12),
-                      CircleAvatar(
-                          backgroundColor: currentAqi['color'], radius: 6),
-                      const SizedBox(width: 8),
-                      AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 300),
-                        child: Text(
-                          "${currentAqi['value']} ${currentAqi['level']}",
-                          key: ValueKey(_currentIndex),
-                          style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 18,
-                              fontWeight: FontWeight.w500),
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 20),
-
-                  /// Modes: Graph | Gauge | Wave
-                  AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 400),
-                    child: _viewMode == 0
-                        ? _buildGraphView(currentAqi)
-                        : _viewMode == 1
-                        ? _buildGaugeView(currentAqi)
-                        : _buildWaveView(currentAqi),
-                  ),
-
-                  const Divider(color: Colors.white24, thickness: 0.5, height: 28),
-
-                  /// Suggestion
-                  AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 400),
-                    child: Text(
-                      currentAqi['suggestion'],
-                      key: ValueKey(_currentIndex),
-                      style:
-                      const TextStyle(color: Colors.white70, fontSize: 14),
+                ),
+                const SizedBox(width: 12),
+                CircleAvatar(backgroundColor: currentAqi['color'], radius: 6),
+                const SizedBox(width: 8),
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 300),
+                  child: Text(
+                    "${currentAqi['value']} ${currentAqi['level']}",
+                    key: ValueKey(_currentIndex),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w500,
                     ),
                   ),
-                ],
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 20),
+
+            /// Modes: Graph | Gauge | Wave
+            AnimatedSwitcher(
+              duration: const Duration(milliseconds: 400),
+              child: _viewMode == 0
+                  ? _buildGraphView()
+                  : _viewMode == 1
+                  ? _buildGaugeView(currentAqi)
+                  : _buildWaveView(currentAqi),
+            ),
+
+            const Divider(color: Colors.white24, thickness: 0.5, height: 28),
+
+            /// Suggestion
+            AnimatedSwitcher(
+              duration: const Duration(milliseconds: 400),
+              child: Text(
+                currentAqi['suggestion'],
+                key: ValueKey(_currentIndex),
+                style: const TextStyle(color: Colors.white70, fontSize: 14),
               ),
             ),
-          ),
+          ],
         ),
       ),
     );
   }
 
   /// Graph View
-  Widget _buildGraphView(Map<String, dynamic> currentAqi) {
+  Widget _buildGraphView() {
     return Column(
       children: [
         LayoutBuilder(
@@ -246,44 +219,39 @@ class _AirQualityCardState extends State<AirQualityCard>
     );
   }
 
-  /// Circular Gauge View
+  /// Gauge View
   Widget _buildGaugeView(Map<String, dynamic> currentAqi) {
     return Center(
-      child: ShaderMask(
-        shaderCallback: (rect) {
-          return const SweepGradient(
-            startAngle: 0.0,
-            endAngle: 3.14 * 2,
-            colors: [Colors.green, Colors.yellow, Colors.orange, Colors.red, Colors.purple],
-          ).createShader(rect);
-        },
-        child: CircularPercentIndicator(
-          radius: 95.0,
-          lineWidth: 16.0,
-          percent: currentAqi['value'] / 500,
-          center: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                "${currentAqi['value']}",
-                style: const TextStyle(
-                    fontSize: 32, fontWeight: FontWeight.bold, color: Colors.white),
+      child: CircularPercentIndicator(
+        radius: 95.0,
+        lineWidth: 16.0,
+        percent: currentAqi['value'] / 500,
+        center: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              "${currentAqi['value']}",
+              style: const TextStyle(
+                fontSize: 32,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
               ),
-              Text(
-                currentAqi['level'],
-                style: const TextStyle(color: Colors.white70, fontSize: 14),
-              ),
-            ],
-          ),
-          backgroundColor: Colors.white12,
-          circularStrokeCap: CircularStrokeCap.round,
-          animation: true,
+            ),
+            Text(
+              currentAqi['level'],
+              style: const TextStyle(color: Colors.white70, fontSize: 14),
+            ),
+          ],
         ),
+        backgroundColor: Colors.white12,
+        progressColor: currentAqi['color'],
+        circularStrokeCap: CircularStrokeCap.round,
+        animation: true,
       ),
     );
   }
 
-  /// Wave View with sine animation
+  /// Wave View
   Widget _buildWaveView(Map<String, dynamic> currentAqi) {
     return SizedBox(
       height: 140,
@@ -291,14 +259,14 @@ class _AirQualityCardState extends State<AirQualityCard>
         alignment: Alignment.center,
         children: [
           ClipRRect(
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(16),
             child: TweenAnimationBuilder<double>(
               tween: Tween(begin: 0, end: 2 * math.pi),
               duration: const Duration(seconds: 3),
-              onEnd: () => setState(() {}),
+              onEnd: () => setState(() {}), // loop
               builder: (context, value, child) {
                 return CustomPaint(
-                  size: Size(double.infinity, 120),
+                  size: const Size(double.infinity, 120),
                   painter: _WavePainter(value, currentAqi['color']),
                 );
               },
@@ -310,14 +278,17 @@ class _AirQualityCardState extends State<AirQualityCard>
               Text(
                 "${currentAqi['value']}",
                 style: const TextStyle(
-                    fontSize: 26, fontWeight: FontWeight.bold, color: Colors.white),
+                  fontSize: 26,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
               ),
               Text(
                 currentAqi['level'],
                 style: const TextStyle(color: Colors.white70, fontSize: 14),
               ),
             ],
-          )
+          ),
         ],
       ),
     );
@@ -357,7 +328,7 @@ class _AirQualityCardState extends State<AirQualityCard>
   }
 }
 
-/// Smooth AQI line graph painter
+/// Smooth AQI Graph
 class _SmoothAqiGraphPainter extends CustomPainter {
   final List<Map<String, dynamic>> data;
   final double progress;
@@ -377,8 +348,8 @@ class _SmoothAqiGraphPainter extends CustomPainter {
       ..strokeCap = StrokeCap.round;
 
     final points = data.asMap().entries.map((entry) {
-      int i = entry.key;
-      var d = entry.value;
+      final i = entry.key;
+      final d = entry.value;
       final x = (i / (data.length - 1)) * size.width;
       final y = size.height - (d['value'] / maxAqi) * size.height;
       return Offset(x, y);
@@ -393,13 +364,14 @@ class _SmoothAqiGraphPainter extends CustomPainter {
     }
     canvas.drawPath(path, linePaint);
 
+    // Indicator dot
     final indicatorX = progress * size.width;
     final currentIndex = (progress * (data.length - 1)).round();
     final indicatorY =
         size.height - (data[currentIndex]['value'] / maxAqi) * size.height;
 
     final glowPaint = Paint()
-      ..color = data[currentIndex]['color'].withOpacity(0.4)
+      ..color = (data[currentIndex]['color'] as Color).withOpacity(0.4)
       ..maskFilter = const ui.MaskFilter.blur(ui.BlurStyle.normal, 6);
     canvas.drawCircle(Offset(indicatorX, indicatorY), 10, glowPaint);
 
@@ -411,11 +383,11 @@ class _SmoothAqiGraphPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _SmoothAqiGraphPainter oldDelegate) {
-    return oldDelegate.progress != progress;
+    return oldDelegate.progress != progress || oldDelegate.data != data;
   }
 }
 
-/// Painter for sine waves
+/// Wave Painter
 class _WavePainter extends CustomPainter {
   final double phase;
   final Color color;
@@ -433,7 +405,7 @@ class _WavePainter extends CustomPainter {
 
     final path = Path();
     for (double x = 0; x <= size.width; x++) {
-      double y = size.height / 2 +
+      final y = size.height / 2 +
           12 * math.sin((x / size.width * 2 * math.pi) + phase);
       if (x == 0) {
         path.moveTo(x, y);
@@ -450,6 +422,6 @@ class _WavePainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _WavePainter oldDelegate) {
-    return oldDelegate.phase != phase;
+    return oldDelegate.phase != phase || oldDelegate.color != color;
   }
 }
