@@ -1,31 +1,48 @@
 // lib/views/home_screen.dart
 
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import '../controllers/home_controller.dart';
-import 'widgets/custom_bottom_nav_bar.dart';
-import 'home_view.dart';
+import 'package:weatherly/views/widgets/air_quality_card.dart';
+import 'package:weatherly/views/widgets/current_weather_card.dart';
+import 'package:weatherly/views/widgets/health_outlook_card.dart';
+import 'package:weatherly/views/widgets/seven_day_forecast_card.dart';
+import 'package:weatherly/views/widgets/sun_and_moon_card.dart';
+import 'package:weatherly/views/widgets/tonights_weather_card.dart';
+import 'package:weatherly/views/widgets/ai_suggestion_card.dart';
+import 'package:weatherly/views/widgets/weather_radar_card.dart';
+import 'package:weatherly/views/widgets/hourly_forecast_card.dart';
+
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final controller = Provider.of<HomeController>(context, listen: false);
-
-    return Scaffold(
-      backgroundColor: const Color(0xFF121212),
-      bottomNavigationBar: const CustomBottomNavBar(),
-      body: PageView(
-        controller: controller.pageController,
-        onPageChanged: controller.onPageChanged,
-        children: const <Widget>[
-          HomeView(), // This correctly points to your home content
-          Center(child: Text('Hourly View', style: TextStyle(color: Colors.white))),
-          Center(child: Text('Daily View', style: TextStyle(color: Colors.white))),
-          Center(child: Text('Radar View', style: TextStyle(color: Colors.white))),
-          Center(child: Text('AI View', style: TextStyle(color: Colors.white))),
-        ],
+    // ✅ CHANGED: Replaced the CustomScrollView with a simple SingleChildScrollView
+    // This removes the extra AppBar from this screen.
+    return const SingleChildScrollView(
+      child: Padding(
+        padding: EdgeInsets.all(16.0),
+        child: Column(
+          children: [
+            CurrentWeatherCard(),
+            SizedBox(height: 16),
+            TonightsWeatherCard(),
+            SizedBox(height: 16),
+            AiSuggestionCard(),
+            SizedBox(height: 16),
+            WeatherRadarCard(),
+            SizedBox(height: 16),
+            HourlyForecastCard(),
+            SizedBox(height: 16),
+            SevenDayForecastCard(),
+            SizedBox(height: 16),
+            AirQualityCard(),
+            SizedBox(height: 16),
+            HealthOutlookCard(),
+            SizedBox(height: 16),
+            SunAndMoonCard(),
+          ],
+        ),
       ),
     );
   }

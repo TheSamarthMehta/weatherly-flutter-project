@@ -1,11 +1,12 @@
+// lib/main.dart
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:weatherly/routing/app_routes.dart'; // <-- UPDATE THIS IMPORT
 import 'controllers/home_controller.dart';
-import 'views/home_screen.dart';
 
 void main() {
   runApp(
-    // The Provider is now at the top of the widget tree
     ChangeNotifierProvider(
       create: (context) => HomeController(),
       child: const MyApp(),
@@ -26,7 +27,8 @@ class MyApp extends StatelessWidget {
         scaffoldBackgroundColor: const Color(0xFF0C0D1E),
       ),
       debugShowCheckedModeBanner: false,
-      home: const HomeScreen(),
+      initialRoute: AppRoutes.main, // <-- UPDATE THIS LINE
+      onGenerateRoute: AppRoutes.onGenerateRoute,
     );
   }
 }

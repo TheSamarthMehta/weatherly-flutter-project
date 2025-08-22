@@ -3,12 +3,9 @@
 import 'package:flutter/material.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'dart:ui'; // Needed for FontFeature
-import 'package:weatherly/models/weather_data_model.dart';
 
 class CurrentWeatherCard extends StatefulWidget {
-  // ✅ ADDED: weatherData parameter to accept live data
-  final WeatherData weatherData;
-  const CurrentWeatherCard({super.key, required this.weatherData});
+  const CurrentWeatherCard({super.key});
 
   @override
   State<CurrentWeatherCard> createState() => _CurrentWeatherCardState();
@@ -23,13 +20,14 @@ class _CurrentWeatherCardState extends State<CurrentWeatherCard> {
       duration: const Duration(milliseconds: 300),
       curve: Curves.easeOut,
       child: Card(
-        color: Colors.grey[900],
+        color: Colors.grey[900], // same as Tonight’sWeatherCard
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         child: Padding(
           padding: const EdgeInsets.all(16.0),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              // Top row: "CURRENT WEATHER" and the time
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -42,8 +40,7 @@ class _CurrentWeatherCardState extends State<CurrentWeatherCard> {
                     ),
                   ),
                   Text(
-                    // ✅ DYNAMIC: Show current time
-                    TimeOfDay.now().format(context),
+                    "9:37 AM IST",
                     style: TextStyle(
                       color: Colors.white.withOpacity(0.7),
                       fontSize: 14,
@@ -52,13 +49,17 @@ class _CurrentWeatherCardState extends State<CurrentWeatherCard> {
                   ),
                 ],
               ),
-              const Divider(
+
+              // Top divider matching bottom one
+              Divider(
                 color: Colors.white24,
                 thickness: 0.5,
                 height: 32,
                 indent: 8,
                 endIndent: 8,
               ),
+
+              // Main content row
               Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
@@ -66,11 +67,10 @@ class _CurrentWeatherCardState extends State<CurrentWeatherCard> {
                     flex: 2,
                     child: Row(
                       children: [
-                        // ✅ DYNAMIC: Show weather icon from API
-                        Image.network(
-                          'https://openweathermap.org/img/wn/${widget.weatherData.icon}@4x.png',
-                          width: 80,
-                          height: 80,
+                        Icon(
+                          PhosphorIcons.cloudSun(PhosphorIconsStyle.fill),
+                          color: Colors.amber,
+                          size: 60,
                         ),
                         const SizedBox(width: 8),
                         Flexible(
@@ -80,10 +80,9 @@ class _CurrentWeatherCardState extends State<CurrentWeatherCard> {
                             child: Row(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                // ✅ DYNAMIC: Show temperature
-                                Text(
-                                  "${widget.weatherData.temperature.round()}°",
-                                  style: const TextStyle(
+                                const Text(
+                                  "79°",
+                                  style: TextStyle(
                                     fontSize: 72,
                                     fontWeight: FontWeight.w300,
                                     color: Colors.white,
@@ -112,24 +111,44 @@ class _CurrentWeatherCardState extends State<CurrentWeatherCard> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
-                        // ✅ DYNAMIC: Show "feels like" temperature
                         RichText(
-                          text: TextSpan(
-                            style: const TextStyle(
+                          text: const TextSpan(
+                            style: TextStyle(
                               color: Colors.white,
                               fontSize: 18,
                               fontFamily: 'sans-serif',
                             ),
                             children: [
-                              const TextSpan(text: "RealFeel"),
-                              const TextSpan(
+                              TextSpan(text: "RealFeel"),
+                              TextSpan(
                                 text: "®",
                                 style: TextStyle(
                                   fontSize: 10,
                                   fontFeatures: [FontFeature.superscripts()],
                                 ),
                               ),
-                              TextSpan(text: " ${widget.weatherData.feelsLike.round()}°"),
+                              TextSpan(text: " 90°"),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        RichText(
+                          text: const TextSpan(
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 18,
+                              fontFamily: 'sans-serif',
+                            ),
+                            children: [
+                              TextSpan(text: "RealFeel Shade"),
+                              TextSpan(
+                                text: "™",
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontFeatures: [FontFeature.superscripts()],
+                                ),
+                              ),
+                              TextSpan(text: " 86°"),
                             ],
                           ),
                         ),
@@ -139,14 +158,20 @@ class _CurrentWeatherCardState extends State<CurrentWeatherCard> {
                 ],
               ),
               const SizedBox(height: 10),
+
+              // Conditionally display the expanded details
               if (_isExpanded) _buildExpandedDetails(),
-              const Divider(
+
+              // Bottom divider
+              Divider(
                 color: Colors.white24,
                 thickness: 0.5,
                 height: 32,
                 indent: 8,
                 endIndent: 8,
               ),
+
+              // Tappable row to toggle expanded state
               InkWell(
                 onTap: () {
                   setState(() {
@@ -187,11 +212,17 @@ class _CurrentWeatherCardState extends State<CurrentWeatherCard> {
     return Column(
       children: [
         const SizedBox(height: 10),
-        // ✅ DYNAMIC: Show all details from the API
-        _buildDetailRow("Wind", "${widget.weatherData.windSpeed.toStringAsFixed(1)} mph"),
-        _buildDetailRow("Humidity", "${widget.weatherData.humidity}%"),
-        _buildDetailRow("Description", widget.weatherData.description),
-        // You can add more details here if the API provides them
+        _buildDetailRow("Wind", "SE 3 mph"),
+        _buildDetailRow("Max Wind Gusts", "18 mph"),
+        _buildDetailRow("Humidity", "92%"),
+        _buildDetailRow("Indoor Humidity", "92% (Extremely Humid)"),
+        _buildDetailRow("Dew Point", "76° F"),
+        _buildDetailRow("Max UV Index", "1.9 (Low)"),
+        _buildDetailRow("Cloud Cover", "76%"),
+        _buildDetailRow("Visibility", "5 mi"),
+        _buildDetailRow("Cloud Ceiling", "7000 ft"),
+        _buildDetailRow("Air Quality", "39 (Fair)"),
+        _buildDetailRow("Pressure", "↓ 29.64 in"),
       ],
     );
   }
@@ -222,4 +253,3 @@ class _CurrentWeatherCardState extends State<CurrentWeatherCard> {
     );
   }
 }
-
