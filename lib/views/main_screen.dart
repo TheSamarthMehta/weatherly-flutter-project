@@ -2,7 +2,6 @@
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:weatherly/views/ai_screen.dart';
 import 'package:weatherly/views/daily_screen.dart';
 import 'package:weatherly/views/home_screen.dart';
 import 'package:weatherly/views/hourly_screen.dart';
@@ -30,7 +29,6 @@ class MainScreen extends StatelessWidget {
               HourlyScreen(),
               DailyScreen(),
               RadarScreen(),
-              AiScreen(),
             ],
           );
         },

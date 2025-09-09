@@ -1,6 +1,8 @@
 // lib/views/widgets/air_quality_card.dart
+
 import 'package:flutter/material.dart';
-import 'dart:ui' as ui;
+import 'package:flutter/services.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'dart:math' as math;
 import 'package:percent_indicator/percent_indicator.dart';
 
@@ -12,10 +14,16 @@ class AirQualityCard extends StatefulWidget {
 }
 
 class _AirQualityCardState extends State<AirQualityCard>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   double _progress = 0.0;
   int _currentIndex = 0;
   int _viewMode = 0; // 0 = Graph, 1 = Gauge, 2 = Wave
+  late AnimationController _fadeController;
+  late AnimationController _pulseController;
+  late AnimationController _waveController;
+  late Animation<double> _fadeAnimation;
+  late Animation<double> _pulseAnimation;
+  late Animation<double> _waveAnimation;
 
   final List<Map<String, dynamic>> aqiData = [
     {
@@ -90,338 +98,542 @@ class _AirQualityCardState extends State<AirQualityCard>
     },
   ];
 
+  @override
+  void initState() {
+    super.initState();
+    _fadeController = AnimationController(
+      duration: const Duration(milliseconds: 1000),
+      vsync: this,
+    );
+    _pulseController = AnimationController(
+      duration: const Duration(milliseconds: 2000),
+      vsync: this,
+    );
+    _waveController = AnimationController(
+      duration: const Duration(milliseconds: 3000),
+      vsync: this,
+    );
+    
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _fadeController, curve: Curves.easeOut),
+    );
+    _pulseAnimation = Tween<double>(begin: 1.0, end: 1.05).animate(
+      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
+    );
+    _waveAnimation = Tween<double>(begin: 0.0, end: 2 * math.pi).animate(
+      CurvedAnimation(parent: _waveController, curve: Curves.linear),
+    );
+    
+    _fadeController.forward();
+    _pulseController.repeat(reverse: true);
+    _waveController.repeat();
+  }
+
+  @override
+  void dispose() {
+    _fadeController.dispose();
+    _pulseController.dispose();
+    _waveController.dispose();
+    super.dispose();
+  }
+
   void _onHorizontalDragUpdate(DragUpdateDetails details, double width) {
     setState(() {
       _progress = (_progress + details.delta.dx / width).clamp(0.0, 1.0);
       _currentIndex = (_progress * (aqiData.length - 1)).round();
     });
+    HapticFeedback.lightImpact();
+  }
+
+  void _switchViewMode() {
+    setState(() {
+      _viewMode = (_viewMode + 1) % 3;
+    });
+    HapticFeedback.lightImpact();
   }
 
   @override
   Widget build(BuildContext context) {
-    final currentAqi = aqiData[_currentIndex];
-
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(20),
-      child: Container(
-        color: const Color(0xFF212121), // Fixed grey[900] background
-        padding: const EdgeInsets.all(18.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            /// Title + Mode Switch
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  "24-HOUR AIR QUALITY INDEX",
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.white.withOpacity(0.8),
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 1.2,
-                  ),
-                ),
-                IconButton(
-                  onPressed: () {
-                    setState(() {
-                      _viewMode = (_viewMode + 1) % 3;
-                    });
-                  },
-                  icon: Icon(Icons.layers, color: Colors.white.withOpacity(0.9)),
-                  splashColor: Colors.transparent,
-                  highlightColor: Colors.transparent,
+    return AnimatedBuilder(
+      animation: _fadeAnimation,
+      builder: (context, child) {
+        return FadeTransition(
+          opacity: _fadeAnimation,
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(20),
+              gradient: LinearGradient(
+                colors: [
+                  Colors.green.withOpacity(0.1),
+                  Colors.blue.withOpacity(0.1),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.2),
+                  blurRadius: 15,
+                  offset: const Offset(0, 8),
                 ),
               ],
             ),
-            const Divider(),
-
-            /// AQI Value + Time
-            Row(
-              children: [
-                Text(
-                  currentAqi['time'],
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                  ),
+            child: Card(
+              elevation: 0,
+              color: Colors.transparent,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              child: Padding(
+                padding: const EdgeInsets.all(20.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildHeader(),
+                    const SizedBox(height: 20),
+                    _buildMainContent(),
+                    const SizedBox(height: 20),
+                    _buildViewSwitcher(),
+                  ],
                 ),
-                const SizedBox(width: 12),
-                CircleAvatar(backgroundColor: currentAqi['color'], radius: 6),
-                const SizedBox(width: 8),
-                AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 300),
-                  child: Text(
-                    "${currentAqi['value']} ${currentAqi['level']}",
-                    key: ValueKey(_currentIndex),
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 20),
-
-            /// Modes: Graph | Gauge | Wave
-            AnimatedSwitcher(
-              duration: const Duration(milliseconds: 400),
-              child: _viewMode == 0
-                  ? _buildGraphView()
-                  : _viewMode == 1
-                  ? _buildGaugeView(currentAqi)
-                  : _buildWaveView(currentAqi),
-            ),
-
-            const Divider(color: Colors.white24, thickness: 0.5, height: 28),
-
-            /// Suggestion
-            AnimatedSwitcher(
-              duration: const Duration(milliseconds: 400),
-              child: Text(
-                currentAqi['suggestion'],
-                key: ValueKey(_currentIndex),
-                style: const TextStyle(color: Colors.white70, fontSize: 14),
               ),
             ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 
-  /// Graph View
-  Widget _buildGraphView() {
+  Widget _buildHeader() {
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: Colors.green.withOpacity(0.2),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: const Icon(
+            Icons.air,
+            color: Colors.green,
+            size: 20,
+          ),
+        ),
+        const SizedBox(width: 12),
+        const Text(
+          "AIR QUALITY INDEX",
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 14,
+            fontWeight: FontWeight.bold,
+            letterSpacing: 1.2,
+          ),
+        ),
+        const Spacer(),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          decoration: BoxDecoration(
+            color: Colors.green.withOpacity(0.2),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.green.withOpacity(0.3)),
+          ),
+          child: const Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.schedule,
+                color: Colors.green,
+                size: 12,
+              ),
+              SizedBox(width: 4),
+              Text(
+                "24H",
+                style: TextStyle(
+                  color: Colors.green,
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMainContent() {
+    final currentData = aqiData[_currentIndex];
+    
     return Column(
       children: [
-        LayoutBuilder(
-          builder: (context, constraints) {
-            return GestureDetector(
-              onHorizontalDragUpdate: (details) =>
-                  _onHorizontalDragUpdate(details, constraints.maxWidth),
-              child: CustomPaint(
-                size: Size(constraints.maxWidth, 120),
-                painter: _SmoothAqiGraphPainter(
-                  data: aqiData,
-                  progress: _progress,
+        _buildCurrentAQI(currentData),
+        const SizedBox(height: 20),
+        _buildVisualization(currentData),
+        const SizedBox(height: 16),
+        _buildSuggestion(currentData),
+      ],
+    );
+  }
+
+  Widget _buildCurrentAQI(Map<String, dynamic> data) {
+    return Row(
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                "Current AQI",
+                style: TextStyle(
+                  color: Colors.white.withOpacity(0.7),
+                  fontSize: 14,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Text(
+                    "${data['value']}",
+                    style: TextStyle(
+                      color: data['color'],
+                      fontSize: 32,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: data['color'].withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: data['color'].withOpacity(0.3)),
+                    ),
+                    child: Text(
+                      data['level'],
+                      style: TextStyle(
+                        color: data['color'],
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        AnimatedBuilder(
+          animation: _pulseAnimation,
+          builder: (context, child) {
+            return Transform.scale(
+              scale: _pulseAnimation.value,
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: data['color'].withOpacity(0.2),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: data['color'].withOpacity(0.3)),
+                ),
+                child: Icon(
+                  _getAQIIcon(data['value']),
+                  color: data['color'],
+                  size: 32,
                 ),
               ),
             );
           },
         ),
-        const SizedBox(height: 12),
-        _buildGradientLegend(),
       ],
     );
   }
 
-  /// Gauge View
-  Widget _buildGaugeView(Map<String, dynamic> currentAqi) {
-    return Center(
-      child: CircularPercentIndicator(
-        radius: 95.0,
-        lineWidth: 16.0,
-        percent: currentAqi['value'] / 500,
-        center: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              "${currentAqi['value']}",
-              style: const TextStyle(
-                fontSize: 32,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-            ),
-            Text(
-              currentAqi['level'],
-              style: const TextStyle(color: Colors.white70, fontSize: 14),
-            ),
-          ],
+  IconData _getAQIIcon(int value) {
+    if (value <= 50) return PhosphorIcons.wind(PhosphorIconsStyle.fill);
+    if (value <= 100) return PhosphorIcons.cloud(PhosphorIconsStyle.fill);
+    if (value <= 150) return PhosphorIcons.warning(PhosphorIconsStyle.fill);
+    return PhosphorIcons.warningOctagon(PhosphorIconsStyle.fill);
+  }
+
+  Widget _buildVisualization(Map<String, dynamic> data) {
+    switch (_viewMode) {
+      case 0:
+        return _buildGraphView();
+      case 1:
+        return _buildGaugeView(data);
+      case 2:
+        return _buildWaveView(data);
+      default:
+        return _buildGraphView();
+    }
+  }
+
+  Widget _buildGraphView() {
+    return Container(
+      height: 120,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        color: Colors.white.withOpacity(0.05),
+        border: Border.all(color: Colors.white.withOpacity(0.1)),
+      ),
+      child: GestureDetector(
+        onHorizontalDragUpdate: (details) => _onHorizontalDragUpdate(details, 300),
+        child: CustomPaint(
+          painter: _SmoothAqiGraphPainter(
+            aqiData: aqiData,
+            selectedIndex: _currentIndex,
+            progress: _progress,
+          ),
+          child: Container(),
         ),
-        backgroundColor: Colors.white12,
-        progressColor: currentAqi['color'],
-        circularStrokeCap: CircularStrokeCap.round,
-        animation: true,
       ),
     );
   }
 
-  /// Wave View
-  Widget _buildWaveView(Map<String, dynamic> currentAqi) {
-    return SizedBox(
-      height: 140,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(16),
-            child: TweenAnimationBuilder<double>(
-              tween: Tween(begin: 0, end: 2 * math.pi),
-              duration: const Duration(seconds: 3),
-              onEnd: () => setState(() {}), // loop
-              builder: (context, value, child) {
-                return CustomPaint(
-                  size: const Size(double.infinity, 120),
-                  painter: _WavePainter(value, currentAqi['color']),
-                );
-              },
-            ),
-          ),
-          Column(
+  Widget _buildGaugeView(Map<String, dynamic> data) {
+    final percentage = (data['value'] / 500).clamp(0.0, 1.0);
+    
+    return Container(
+      height: 120,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        color: Colors.white.withOpacity(0.05),
+        border: Border.all(color: Colors.white.withOpacity(0.1)),
+      ),
+      child: Center(
+        child: CircularPercentIndicator(
+          radius: 45,
+          lineWidth: 8,
+          percent: percentage,
+          center: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Text(
-                "${currentAqi['value']}",
-                style: const TextStyle(
-                  fontSize: 26,
+                "${data['value']}",
+                style: TextStyle(
+                  color: data['color'],
+                  fontSize: 20,
                   fontWeight: FontWeight.bold,
-                  color: Colors.white,
                 ),
               ),
               Text(
-                currentAqi['level'],
-                style: const TextStyle(color: Colors.white70, fontSize: 14),
+                "AQI",
+                style: TextStyle(
+                  color: Colors.white.withOpacity(0.7),
+                  fontSize: 12,
+                ),
               ),
             ],
+          ),
+          progressColor: data['color'],
+          backgroundColor: Colors.white.withOpacity(0.1),
+          circularStrokeCap: CircularStrokeCap.round,
+          animation: true,
+          animationDuration: 1000,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildWaveView(Map<String, dynamic> data) {
+    return Container(
+      height: 120,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        color: Colors.white.withOpacity(0.05),
+        border: Border.all(color: Colors.white.withOpacity(0.1)),
+      ),
+      child: AnimatedBuilder(
+        animation: _waveAnimation,
+        builder: (context, child) {
+          return CustomPaint(
+            painter: _WavePainter(
+              color: data['color'],
+              animation: _waveAnimation.value,
+              intensity: (data['value'] / 500).clamp(0.0, 1.0),
+            ),
+            child: Container(),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildSuggestion(Map<String, dynamic> data) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        color: data['color'].withOpacity(0.1),
+        border: Border.all(color: data['color'].withOpacity(0.2)),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            Icons.lightbulb_outline,
+            color: data['color'],
+            size: 20,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              data['suggestion'],
+              style: TextStyle(
+                color: Colors.white.withOpacity(0.9),
+                fontSize: 14,
+              ),
+            ),
           ),
         ],
       ),
     );
   }
 
-  /// Gradient Legend
-  Widget _buildGradientLegend() {
-    return Column(
-      children: [
-        Container(
-          height: 10,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(8),
-            gradient: const LinearGradient(
-              colors: [
-                Colors.green,
-                Colors.yellow,
-                Colors.orange,
-                Colors.red,
-                Colors.purple
-              ],
-            ),
-          ),
+  Widget _buildViewSwitcher() {
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _buildViewButton(0, Icons.show_chart, "Graph"),
+          _buildViewButton(1, Icons.speed, "Gauge"),
+          _buildViewButton(2, Icons.waves, "Wave"),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildViewButton(int mode, IconData icon, String label) {
+    final isSelected = _viewMode == mode;
+    
+    return GestureDetector(
+      onTap: _switchViewMode,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 300),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? Colors.white.withOpacity(0.2) : Colors.transparent,
+          borderRadius: BorderRadius.circular(8),
         ),
-        const SizedBox(height: 6),
-        const Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Text("Excellent",
-                style: TextStyle(color: Colors.white70, fontSize: 12)),
-            Text("Dangerous",
-                style: TextStyle(color: Colors.white70, fontSize: 12)),
+            Icon(
+              icon,
+              color: isSelected ? Colors.white : Colors.white.withOpacity(0.6),
+              size: 16,
+            ),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: TextStyle(
+                color: isSelected ? Colors.white : Colors.white.withOpacity(0.6),
+                fontSize: 12,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+              ),
+            ),
           ],
         ),
-      ],
+      ),
     );
   }
 }
 
-/// Smooth AQI Graph
 class _SmoothAqiGraphPainter extends CustomPainter {
-  final List<Map<String, dynamic>> data;
+  final List<Map<String, dynamic>> aqiData;
+  final int selectedIndex;
   final double progress;
 
-  _SmoothAqiGraphPainter({required this.data, required this.progress});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final maxAqi =
-    data.map<int>((d) => d['value']).reduce((a, b) => a > b ? a : b);
-
-    final path = Path();
-    final linePaint = Paint()
-      ..color = Colors.white.withOpacity(0.6)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.0
-      ..strokeCap = StrokeCap.round;
-
-    final points = data.asMap().entries.map((entry) {
-      final i = entry.key;
-      final d = entry.value;
-      final x = (i / (data.length - 1)) * size.width;
-      final y = size.height - (d['value'] / maxAqi) * size.height;
-      return Offset(x, y);
-    }).toList();
-
-    path.moveTo(points.first.dx, points.first.dy);
-    for (int i = 0; i < points.length - 1; i++) {
-      final p1 = points[i];
-      final p2 = points[i + 1];
-      final control = Offset((p1.dx + p2.dx) / 2, (p1.dy + p2.dy) / 2);
-      path.quadraticBezierTo(p1.dx, p1.dy, control.dx, control.dy);
-    }
-    canvas.drawPath(path, linePaint);
-
-    // Indicator dot
-    final indicatorX = progress * size.width;
-    final currentIndex = (progress * (data.length - 1)).round();
-    final indicatorY =
-        size.height - (data[currentIndex]['value'] / maxAqi) * size.height;
-
-    final glowPaint = Paint()
-      ..color = (data[currentIndex]['color'] as Color).withOpacity(0.4)
-      ..maskFilter = const ui.MaskFilter.blur(ui.BlurStyle.normal, 6);
-    canvas.drawCircle(Offset(indicatorX, indicatorY), 10, glowPaint);
-
-    final dotPaint = Paint()..color = data[currentIndex]['color'];
-    canvas.drawCircle(Offset(indicatorX, indicatorY), 6, dotPaint);
-    canvas.drawCircle(
-        Offset(indicatorX, indicatorY), 3, Paint()..color = Colors.white);
-  }
-
-  @override
-  bool shouldRepaint(covariant _SmoothAqiGraphPainter oldDelegate) {
-    return oldDelegate.progress != progress || oldDelegate.data != data;
-  }
-}
-
-/// Wave Painter
-class _WavePainter extends CustomPainter {
-  final double phase;
-  final Color color;
-
-  _WavePainter(this.phase, this.color);
+  _SmoothAqiGraphPainter({
+    required this.aqiData,
+    required this.selectedIndex,
+    required this.progress,
+  });
 
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..shader = LinearGradient(
-        colors: [color.withOpacity(0.6), color.withOpacity(0.2)],
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-      ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
+      ..color = Colors.white.withOpacity(0.1)
+      ..strokeWidth = 1
+      ..style = PaintingStyle.stroke;
+
+    // Draw grid lines
+    for (int i = 0; i <= 4; i++) {
+      final y = size.height * i / 4;
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), paint);
+    }
+
+    // Draw data line
+    final dataPaint = Paint()
+      ..color = Colors.green
+      ..strokeWidth = 3
+      ..strokeCap = StrokeCap.round
+      ..style = PaintingStyle.stroke;
 
     final path = Path();
-    for (double x = 0; x <= size.width; x++) {
-      final y = size.height / 2 +
-          12 * math.sin((x / size.width * 2 * math.pi) + phase);
-      if (x == 0) {
+    final pointPaint = Paint()
+      ..color = Colors.green
+      ..style = PaintingStyle.fill;
+
+    for (int i = 0; i < aqiData.length; i++) {
+      final x = size.width * i / (aqiData.length - 1);
+      final value = aqiData[i]['value'] as int;
+      final y = size.height * (1 - value / 500);
+      
+      if (i == 0) {
         path.moveTo(x, y);
       } else {
         path.lineTo(x, y);
       }
-    }
-    path.lineTo(size.width, size.height);
-    path.lineTo(0, size.height);
-    path.close();
 
+      // Draw points
+      final isSelected = i == selectedIndex;
+      final pointColor = isSelected ? Colors.green : Colors.green.withOpacity(0.6);
+      final pointRadius = isSelected ? 6.0 : 3.0;
+      
+      canvas.drawCircle(Offset(x, y), pointRadius, Paint()..color = pointColor);
+    }
+
+    canvas.drawPath(path, dataPaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
+}
+
+class _WavePainter extends CustomPainter {
+  final Color color;
+  final double animation;
+  final double intensity;
+
+  _WavePainter({
+    required this.color,
+    required this.animation,
+    required this.intensity,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color.withOpacity(0.3)
+      ..style = PaintingStyle.fill;
+
+    final path = Path();
+    path.moveTo(0, size.height);
+
+    for (double x = 0; x <= size.width; x++) {
+      final y = size.height * 0.5 + 
+                math.sin(x * 0.02 + animation) * 20 * intensity +
+                math.sin(x * 0.01 + animation * 0.5) * 10 * intensity;
+      path.lineTo(x, y);
+    }
+
+    path.lineTo(size.width, size.height);
+    path.close();
     canvas.drawPath(path, paint);
   }
 
   @override
-  bool shouldRepaint(covariant _WavePainter oldDelegate) {
-    return oldDelegate.phase != phase || oldDelegate.color != color;
-  }
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
 }

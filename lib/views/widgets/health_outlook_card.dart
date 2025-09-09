@@ -1,4 +1,7 @@
+// lib/views/widgets/health_outlook_card.dart
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:intl/intl.dart';
 
@@ -9,13 +12,18 @@ class HealthOutlookCard extends StatefulWidget {
   State<HealthOutlookCard> createState() => _HealthOutlookCardState();
 }
 
-class _HealthOutlookCardState extends State<HealthOutlookCard> {
+class _HealthOutlookCardState extends State<HealthOutlookCard> 
+    with TickerProviderStateMixin {
   DateTime _selectedDate = DateTime.now();
   int _currentPage = 0;
   late final PageController _pageController;
+  late AnimationController _fadeController;
+  late AnimationController _slideController;
+  late AnimationController _riskController;
+  late Animation<double> _fadeAnimation;
+  late Animation<Offset> _slideAnimation;
+  late Animation<double> _riskAnimation;
 
-  // ✅ ADDED: Mock data with a 'value' (0.0 to 1.0) to represent daily risk levels.
-  // This powers the new interactive features.
   final List<Map<String, dynamic>> dailyRiskData = [
     {"dayOffset": 0, "level": "High", "color": Colors.orange, "value": 0.7},
     {"dayOffset": 1, "level": "High", "color": Colors.orange, "value": 0.75},
@@ -29,20 +37,101 @@ class _HealthOutlookCardState extends State<HealthOutlookCard> {
     {"dayOffset": 9, "level": "Extreme", "color": Colors.red, "value": 1.0},
   ];
 
+  final List<Map<String, dynamic>> outlookData = [
+    {
+      "title": "HEALTH CONDITIONS",
+      "icon": PhosphorIcons.heart(PhosphorIconsStyle.fill),
+      "conditions": [
+        {"icon": PhosphorIcons.leaf(PhosphorIconsStyle.fill), "label": "Arthritis", "level": "High", "color": Colors.orange},
+        {"icon": PhosphorIcons.syringe(PhosphorIconsStyle.fill), "label": "Sinus", "level": "Low", "color": Colors.green},
+        {"icon": PhosphorIcons.virus(PhosphorIconsStyle.fill), "label": "Common Cold", "level": "Low", "color": Colors.green},
+        {"icon": PhosphorIcons.wind(PhosphorIconsStyle.fill), "label": "Migraine", "level": "Moderate", "color": Colors.yellow},
+        {"icon": PhosphorIcons.heart(PhosphorIconsStyle.fill), "label": "Asthma", "level": "High", "color": Colors.red},
+      ]
+    },
+    {
+      "title": "OUTDOOR ACTIVITIES",
+      "icon": PhosphorIcons.personSimpleRun(PhosphorIconsStyle.fill),
+      "conditions": [
+        {"icon": PhosphorIcons.fishSimple(PhosphorIconsStyle.fill), "label": "Fishing", "level": "Poor", "color": Colors.red},
+        {"icon": PhosphorIcons.personSimpleRun(PhosphorIconsStyle.fill), "label": "Running", "level": "Poor", "color": Colors.red},
+        {"icon": PhosphorIcons.bicycle(PhosphorIconsStyle.fill), "label": "Biking", "level": "Good", "color": Colors.green},
+        {"icon": PhosphorIcons.umbrella(PhosphorIconsStyle.fill), "label": "Beach & Pool", "level": "Good", "color": Colors.green},
+        {"icon": PhosphorIcons.star(PhosphorIconsStyle.fill), "label": "Stargazing", "level": "Poor", "color": Colors.red},
+      ]
+    },
+    {
+      "title": "TRAVEL & COMMUTE",
+      "icon": PhosphorIcons.airplaneTakeoff(PhosphorIconsStyle.fill),
+      "conditions": [
+        {"icon": PhosphorIcons.airplaneTakeoff(PhosphorIconsStyle.fill), "label": "Travel", "level": "Ideal", "color": Colors.green},
+        {"icon": PhosphorIcons.car(PhosphorIconsStyle.fill), "label": "Driving", "level": "Fair", "color": Colors.yellow},
+      ]
+    },
+    {
+      "title": "HOME & GARDEN",
+      "icon": PhosphorIcons.flower(PhosphorIconsStyle.fill),
+      "conditions": [
+        {"icon": PhosphorIcons.flower(PhosphorIconsStyle.fill), "label": "Lawn Mowing", "level": "Poor", "color": Colors.red},
+        {"icon": PhosphorIcons.tree(PhosphorIconsStyle.fill), "label": "Composting", "level": "Great", "color": Colors.green},
+        {"icon": PhosphorIcons.sun(PhosphorIconsStyle.fill), "label": "Entertaining", "level": "Good", "color": Colors.green},
+      ]
+    },
+    {
+      "title": "PEST ACTIVITY",
+      "icon": PhosphorIcons.bug(PhosphorIconsStyle.fill),
+      "conditions": [
+        {"icon": PhosphorIcons.bug(PhosphorIconsStyle.fill), "label": "Mosquito Activity", "level": "Extreme", "color": Colors.red},
+        {"icon": PhosphorIcons.bugBeetle(PhosphorIconsStyle.fill), "label": "Indoor Pest", "level": "Very High", "color": Colors.red},
+        {"icon": PhosphorIcons.bugBeetle(PhosphorIconsStyle.fill), "label": "Outdoor Pest", "level": "Extreme", "color": Colors.red},
+      ]
+    },
+  ];
+
   @override
   void initState() {
     super.initState();
     _pageController = PageController();
-    _selectedDate = DateTime.now(); // Ensure today is selected initially
+    _selectedDate = DateTime.now();
+    
+    _fadeController = AnimationController(
+      duration: const Duration(milliseconds: 1000),
+      vsync: this,
+    );
+    _slideController = AnimationController(
+      duration: const Duration(milliseconds: 800),
+      vsync: this,
+    );
+    _riskController = AnimationController(
+      duration: const Duration(milliseconds: 1500),
+      vsync: this,
+    );
+    
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _fadeController, curve: Curves.easeOut),
+    );
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0, 0.3),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(parent: _slideController, curve: Curves.easeOutBack));
+    _riskAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _riskController, curve: Curves.easeOut),
+    );
+    
+    _fadeController.forward();
+    _slideController.forward();
+    _riskController.forward();
   }
 
   @override
   void dispose() {
     _pageController.dispose();
+    _fadeController.dispose();
+    _slideController.dispose();
+    _riskController.dispose();
     super.dispose();
   }
 
-  // ✅ ADDED: Helper to get the full risk profile (color, value) for a given date.
   Map<String, dynamic> _getRiskProfileForDate(DateTime date) {
     final today = DateTime.now();
     final todayWithoutTime = DateTime(today.year, today.month, today.day);
@@ -50,277 +139,302 @@ class _HealthOutlookCardState extends State<HealthOutlookCard> {
     final difference = dateWithoutTime.difference(todayWithoutTime).inDays;
 
     return dailyRiskData.firstWhere(
-          (data) => data['dayOffset'] == difference,
+      (data) => data['dayOffset'] == difference,
       orElse: () => {"color": Colors.grey.shade700, "value": 0.0, "level": "N/A"},
     );
   }
 
-  final List<Map<String, dynamic>> outlookData = [
-    {
-      "title": "10-DAY HEALTH OUTLOOK",
-      "conditions": [
-        {"icon": PhosphorIcons.leaf(), "label": "Arthritis", "level": "High", "color": Colors.orange},
-        {"icon": PhosphorIcons.syringe(), "label": "Sinus", "level": "Low", "color": Colors.green},
-        {"icon": PhosphorIcons.virus(), "label": "Common Cold", "level": "Low", "color": Colors.green},
-        {"icon": PhosphorIcons.wind(), "label": "Migraine", "level": "Moderate", "color": Colors.yellow},
-        {"icon": PhosphorIcons.heart(), "label": "Asthma", "level": "High", "color": Colors.red},
-      ]
-    },
-    {
-      "title": "10-DAY OUTDOOR ACTIVITIES OUTLOOK",
-      "conditions": [
-        {"icon": PhosphorIcons.fishSimple(), "label": "Fishing", "level": "Poor", "color": Colors.red},
-        {"icon": PhosphorIcons.personSimpleRun(), "label": "Running", "level": "Poor", "color": Colors.red},
-        {"icon": PhosphorIcons.bicycle(), "label": "Biking", "level": "Good", "color": Colors.green},
-        {"icon": PhosphorIcons.umbrella(), "label": "Beach & Pool", "level": "Good", "color": Colors.green},
-        {"icon": PhosphorIcons.star(), "label": "Stargazing", "level": "Poor", "color": Colors.red},
-      ]
-    },
-    {
-      "title": "10-DAY TRAVEL & COMMUTE OUTLOOK",
-      "conditions": [
-        {"icon": PhosphorIcons.airplaneTakeoff(), "label": "Travel", "level": "Ideal", "color": Colors.green},
-        {"icon": PhosphorIcons.car(), "label": "Driving", "level": "Fair", "color": Colors.yellow},
-      ]
-    },
-    {
-      "title": "10-DAY HOME & GARDEN OUTLOOK",
-      "conditions": [
-        {"icon": PhosphorIcons.flower(), "label": "Lawn Mowing", "level": "Poor", "color": Colors.red},
-        {"icon": PhosphorIcons.tree(), "label": "Composting", "level": "Great", "color": Colors.green},
-        {"icon": PhosphorIcons.sun(), "label": "Entertaining", "level": "Good", "color": Colors.green},
-      ]
-    },
-    {
-      "title": "10-DAY PESTS OUTLOOK",
-      "conditions": [
-        {"icon": PhosphorIcons.bug(), "label": "Mosquito Activity", "level": "Extreme", "color": Colors.red},
-        {"icon": PhosphorIcons.bugBeetle(), "label": "Indoor Pest", "level": "Very High", "color": Colors.red},
-        {"icon": PhosphorIcons.bugBeetle(), "label": "Outdoor Pest", "level": "Extreme", "color": Colors.red},
-      ]
-    },
-    {
-      "title": "10-DAY ALLERGIES OUTLOOK",
-      "conditions": [
-        {"icon": PhosphorIcons.flower(), "label": "Dust & Dander", "level": "Extreme", "color": Colors.red},
-      ]
-    },
-  ];
+  void _selectDate(DateTime date) {
+    setState(() {
+      _selectedDate = date;
+    });
+    HapticFeedback.lightImpact();
+  }
+
+  void _nextPage() {
+    if (_currentPage < outlookData.length - 1) {
+      setState(() {
+        _currentPage++;
+      });
+      _pageController.nextPage(
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
+      HapticFeedback.lightImpact();
+    }
+  }
+
+  void _previousPage() {
+    if (_currentPage > 0) {
+      setState(() {
+        _currentPage--;
+      });
+      _pageController.previousPage(
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
+      HapticFeedback.lightImpact();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      color: Colors.grey[900],
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
-      elevation: 10,
-      shadowColor: Colors.black.withOpacity(0.3),
-      child: Padding(
-        padding: const EdgeInsets.all(18.0),
-        child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              outlookData[_currentPage]['title'],
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.white.withOpacity(0.8),
-                fontWeight: FontWeight.w600,
-                letterSpacing: 1.2,
-              ),
-            ),
-            const Divider(),
-            _buildCalendar(),
-            const SizedBox(height: 16),
-            _buildRiskLevelBar(),
-            const SizedBox(height: 18),
-            SizedBox(
-              height: 280,
-              child: PageView.builder(
-                controller: _pageController,
-                itemCount: outlookData.length,
-                onPageChanged: (index) {
-                  setState(() {
-                    _currentPage = index;
-                  });
-                },
-                itemBuilder: (context, index) {
-                  return _buildConditionsList(
-                    conditions: outlookData[index]['conditions'],
-                  );
-                },
-              ),
-            ),
-            const SizedBox(height: 8),
-            _buildPageIndicator(),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildConditionsList({required List<dynamic> conditions}) {
-    return ListView.separated(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: conditions.length,
-      itemBuilder: (context, index) {
-        return _buildConditionRow(conditions[index]);
-      },
-      separatorBuilder: (context, index) {
-        return Divider(color: Colors.white.withOpacity(0.09), height: 1);
-      },
-    );
-  }
-
-  Widget _buildCalendar() {
-    final dayHeaders = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    final today = DateTime.now();
-    final startOfWeek = today.subtract(Duration(days: today.weekday % 7));
-
-    return Column(
-      children: [
-        Row(
-          children: dayHeaders
-              .map((day) => Expanded(
-            child: Text(
-              day,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                  color: Colors.white70,
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold),
-            ),
-          ))
-              .toList(),
-        ),
-        const SizedBox(height: 4),
-        GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 7,
-            childAspectRatio: 1.2,
-            crossAxisSpacing: 6,
-            mainAxisSpacing: 6,
-          ),
-          itemCount: 14,
-          itemBuilder: (context, index) {
-            final date = startOfWeek.add(Duration(days: index));
-            final isSelected = date.day == _selectedDate.day &&
-                date.month == _selectedDate.month &&
-                date.year == _selectedDate.year;
-
-            final isEnabled = date.isAfter(DateTime.now().subtract(const Duration(days: 1))) &&
-                date.isBefore(DateTime.now().add(const Duration(days: 10)));
-
-            Color bgColor;
-            Color textColor;
-
-            if (isSelected) {
-              bgColor = Colors.white;
-              textColor = Colors.black;
-            } else if (isEnabled) {
-              final riskProfile = _getRiskProfileForDate(date);
-              bgColor = riskProfile['color'];
-              textColor = (bgColor == Colors.yellow) ? Colors.black87 : Colors.white;
-            } else {
-              bgColor = Colors.grey.shade800;
-              textColor = Colors.grey.shade500;
-            }
-
-            return GestureDetector(
-              onTap: isEnabled ? () => setState(() => _selectedDate = date) : null,
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 260),
-                decoration: BoxDecoration(
-                    color: bgColor,
-                    borderRadius: BorderRadius.circular(8),
-                    border: isSelected ? Border.all(color: Colors.blueAccent, width: 2) : null
+    return AnimatedBuilder(
+      animation: _fadeAnimation,
+      builder: (context, child) {
+        return FadeTransition(
+          opacity: _fadeAnimation,
+          child: SlideTransition(
+            position: _slideAnimation,
+            child: Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(20),
+                gradient: LinearGradient(
+                  colors: [
+                    Colors.red.withOpacity(0.1),
+                    Colors.orange.withOpacity(0.1),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
                 ),
-                child: Center(
-                  child: Text(
-                    DateFormat('d').format(date),
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: textColor,
-                    ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.2),
+                    blurRadius: 15,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
+              ),
+              child: Card(
+                elevation: 0,
+                color: Colors.transparent,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                child: Padding(
+                  padding: const EdgeInsets.all(20.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildHeader(),
+                      const SizedBox(height: 20),
+                      _buildCalendar(),
+                      const SizedBox(height: 20),
+                      _buildRiskBar(),
+                      const SizedBox(height: 20),
+                      _buildOutlookSection(),
+                    ],
                   ),
                 ),
               ),
-            );
-          },
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildHeader() {
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: Colors.red.withOpacity(0.2),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: const Icon(
+            Icons.health_and_safety,
+            color: Colors.red,
+            size: 20,
+          ),
+        ),
+        const SizedBox(width: 12),
+        const Text(
+          "HEALTH OUTLOOK",
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 14,
+            fontWeight: FontWeight.bold,
+            letterSpacing: 1.2,
+          ),
+        ),
+        const Spacer(),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          decoration: BoxDecoration(
+            color: Colors.red.withOpacity(0.2),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.red.withOpacity(0.3)),
+          ),
+          child: const Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.calendar_today,
+                color: Colors.red,
+                size: 12,
+              ),
+              SizedBox(width: 4),
+              Text(
+                "10D",
+                style: TextStyle(
+                  color: Colors.red,
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
         ),
       ],
     );
   }
 
-  // ✅ EDITED: This widget is now a state-of-the-art interactive risk bar.
-  Widget _buildRiskLevelBar() {
-    final riskProfile = _getRiskProfileForDate(_selectedDate);
-    final double riskValue = riskProfile['value']?.toDouble() ?? 0.0;
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+  Widget _buildCalendar() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        color: Colors.white.withOpacity(0.05),
+        border: Border.all(color: Colors.white.withOpacity(0.1)),
+      ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            "Risk Calendar",
+            style: TextStyle(
+              color: Colors.white.withOpacity(0.8),
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            height: 60,
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              itemCount: 10,
+              itemBuilder: (context, index) {
+                final date = DateTime.now().add(Duration(days: index));
+                final riskProfile = _getRiskProfileForDate(date);
+                final isSelected = _selectedDate.day == date.day;
+                
+                return GestureDetector(
+                  onTap: () => _selectDate(date),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 300),
+                    margin: const EdgeInsets.only(right: 8),
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(12),
+                      color: isSelected 
+                          ? riskProfile['color'].withOpacity(0.3)
+                          : Colors.white.withOpacity(0.05),
+                      border: Border.all(
+                        color: isSelected 
+                            ? riskProfile['color']
+                            : Colors.white.withOpacity(0.1),
+                        width: isSelected ? 2 : 1,
+                      ),
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          DateFormat('E').format(date),
+                          style: TextStyle(
+                            color: isSelected ? Colors.white : Colors.white.withOpacity(0.7),
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Container(
+                          width: 8,
+                          height: 8,
+                          decoration: BoxDecoration(
+                            color: riskProfile['color'],
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRiskBar() {
+    final riskProfile = _getRiskProfileForDate(_selectedDate);
+    
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        color: Colors.white.withOpacity(0.05),
+        border: Border.all(color: Colors.white.withOpacity(0.1)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: const [
-              Text("LOW", style: TextStyle(color: Colors.white70, fontSize: 12)),
-              Text("EXTREME", style: TextStyle(color: Colors.white70, fontSize: 12)),
+            children: [
+              Text(
+                "Risk Level",
+                style: TextStyle(
+                  color: Colors.white.withOpacity(0.8),
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const Spacer(),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: riskProfile['color'].withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: riskProfile['color'].withOpacity(0.3)),
+                ),
+                child: Text(
+                  riskProfile['level'],
+                  style: TextStyle(
+                    color: riskProfile['color'],
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
             ],
           ),
-          const SizedBox(height: 8),
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final barWidth = constraints.maxWidth;
-              // Calculate thumb position, ensuring it stays within the bar's bounds
-              final thumbPosition = (barWidth - 16) * riskValue; // 16 is thumb's width
-
-              return SizedBox(
-                height: 20, // Increased height to comfortably fit the thumb
-                child: Stack(
+          const SizedBox(height: 12),
+          AnimatedBuilder(
+            animation: _riskAnimation,
+            builder: (context, child) {
+              return Container(
+                height: 8,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(4),
+                  color: Colors.white.withOpacity(0.1),
+                ),
+                child: FractionallySizedBox(
                   alignment: Alignment.centerLeft,
-                  children: [
-                    // The gradient bar
-                    Container(
-                      height: 10,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(5),
-                        gradient: const LinearGradient(
-                          colors: [
-                            Colors.green,
-                            Colors.yellow,
-                            Colors.orange,
-                            Colors.red,
-                          ],
-                        ),
+                  widthFactor: (riskProfile['value'] * _riskAnimation.value).clamp(0.0, 1.0),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(4),
+                      gradient: LinearGradient(
+                        colors: [
+                          riskProfile['color'].withOpacity(0.8),
+                          riskProfile['color'],
+                        ],
                       ),
                     ),
-                    // The animated thumb indicator
-                    AnimatedPositioned(
-                      duration: const Duration(milliseconds: 400),
-                      curve: Curves.easeInOut,
-                      left: thumbPosition,
-                      child: Container(
-                        width: 16,
-                        height: 16,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: Colors.white,
-                          border: Border.all(color: Colors.black.withOpacity(0.5), width: 1.5),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.5),
-                              blurRadius: 3,
-                              offset: const Offset(0, 1),
-                            )
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
               );
             },
@@ -330,73 +444,134 @@ class _HealthOutlookCardState extends State<HealthOutlookCard> {
     );
   }
 
-  Widget _buildConditionRow(Map<String, dynamic> condition) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 7.0, horizontal: 2.0),
-      child: Row(
-        children: [
-          CircleAvatar(
-            radius: 18,
-            backgroundColor: Colors.grey[800],
-            child: Icon(condition['icon'], color: Colors.white, size: 20),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Text(
-              condition['label'],
+  Widget _buildOutlookSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(
+              outlookData[_currentPage]['icon'],
+              color: Colors.white,
+              size: 20,
+            ),
+            const SizedBox(width: 8),
+            Text(
+              outlookData[_currentPage]['title'],
               style: const TextStyle(
-                  color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600),
+                color: Colors.white,
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+              ),
             ),
+            const Spacer(),
+            Row(
+              children: [
+                IconButton(
+                  onPressed: _previousPage,
+                  icon: Icon(
+                    Icons.chevron_left,
+                    color: _currentPage > 0 ? Colors.white : Colors.white.withOpacity(0.3),
+                    size: 20,
+                  ),
+                ),
+                Text(
+                  "${_currentPage + 1}/${outlookData.length}",
+                  style: TextStyle(
+                    color: Colors.white.withOpacity(0.7),
+                    fontSize: 12,
+                  ),
+                ),
+                IconButton(
+                  onPressed: _nextPage,
+                  icon: Icon(
+                    Icons.chevron_right,
+                    color: _currentPage < outlookData.length - 1 ? Colors.white : Colors.white.withOpacity(0.3),
+                    size: 20,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+                 SizedBox(
+           height: 100,
+           child: PageView.builder(
+            controller: _pageController,
+            onPageChanged: (index) {
+              setState(() {
+                _currentPage = index;
+              });
+            },
+            itemCount: outlookData.length,
+            itemBuilder: (context, pageIndex) {
+              final conditions = outlookData[pageIndex]['conditions'] as List;
+                             return GridView.builder(
+                 physics: const BouncingScrollPhysics(),
+                                 gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                   crossAxisCount: 2,
+                   childAspectRatio: 3.2,
+                   crossAxisSpacing: 4,
+                   mainAxisSpacing: 4,
+                 ),
+                itemCount: conditions.length,
+                itemBuilder: (context, index) {
+                  final condition = conditions[index];
+                                     return Container(
+                     padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(12),
+                      color: condition['color'].withOpacity(0.1),
+                      border: Border.all(color: condition['color'].withOpacity(0.3)),
+                    ),
+                    child: Row(
+                      children: [
+                                                 Icon(
+                           condition['icon'],
+                           color: condition['color'],
+                           size: 12,
+                         ),
+                                                 const SizedBox(width: 4),
+                        Expanded(
+                                                                  child: Column(
+                       crossAxisAlignment: CrossAxisAlignment.start,
+                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                     children: [
+                       Flexible(
+                         child: Text(
+                           condition['label'],
+                           style: const TextStyle(
+                             color: Colors.white,
+                             fontSize: 10,
+                             fontWeight: FontWeight.bold,
+                           ),
+                           overflow: TextOverflow.ellipsis,
+                         ),
+                       ),
+                       Flexible(
+                         child: Text(
+                           condition['level'],
+                           style: TextStyle(
+                             color: condition['color'],
+                             fontSize: 8,
+                             fontWeight: FontWeight.bold,
+                           ),
+                           overflow: TextOverflow.ellipsis,
+                         ),
+                       ),
+                     ],
+                   ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              );
+            },
           ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-            decoration: BoxDecoration(
-              color: condition['color'].withOpacity(0.21),
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: Text(
-              condition['level'],
-              style: TextStyle(
-                  color: condition['color'],
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14),
-            ),
-          ),
-          const SizedBox(width: 10),
-          CircleAvatar(backgroundColor: condition['color'], radius: 7),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPageIndicator() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: List.generate(outlookData.length, (index) {
-        bool isActive = _currentPage == index;
-        return GestureDetector(
-          onTap: () {
-            _pageController.animateToPage(
-              index,
-              duration: const Duration(milliseconds: 400),
-              curve: Curves.easeInOut,
-            );
-          },
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 350),
-            width: isActive ? 17 : 8,
-            height: 8,
-            margin: const EdgeInsets.symmetric(horizontal: 6),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(12),
-              color: isActive ? Colors.blueAccent : Colors.grey[600],
-              boxShadow: isActive
-                  ? [BoxShadow(color: Colors.blueAccent.withOpacity(0.32), blurRadius: 7)]
-                  : [],
-            ),
-          ),
-        );
-      }),
+        ),
+      ],
     );
   }
 }

@@ -1,7 +1,6 @@
 // lib/views/widgets/live_content_card.dart
 
 import 'package:flutter/material.dart';
-import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 class LiveContentCard extends StatelessWidget {
   const LiveContentCard({super.key});

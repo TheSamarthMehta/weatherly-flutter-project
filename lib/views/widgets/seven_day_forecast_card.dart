@@ -1,6 +1,8 @@
+// lib/views/widgets/seven_day_forecast_card.dart
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
-import 'dart:math';
 
 class SevenDayForecastCard extends StatefulWidget {
   const SevenDayForecastCard({super.key});
@@ -9,8 +11,13 @@ class SevenDayForecastCard extends StatefulWidget {
   State<SevenDayForecastCard> createState() => _SevenDayForecastCardState();
 }
 
-class _SevenDayForecastCardState extends State<SevenDayForecastCard> {
+class _SevenDayForecastCardState extends State<SevenDayForecastCard> 
+    with TickerProviderStateMixin {
   int? _selectedIndex;
+  late AnimationController _fadeController;
+  late AnimationController _slideController;
+  late Animation<double> _fadeAnimation;
+  late Animation<Offset> _slideAnimation;
 
   final List<Map<String, dynamic>> forecastData = [
     {
@@ -79,161 +86,443 @@ class _SevenDayForecastCardState extends State<SevenDayForecastCard> {
   ];
 
   @override
-  Widget build(BuildContext context) {
-    return Card(
-      color: Colors.grey[900],
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              "7-DAY FORECAST",
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.white.withOpacity(0.6),
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const Divider(
-              color: Colors.white24,
-              thickness: 1.0,
-              height: 32,
-            ),
-            // No extra SizedBox - header and Divider right up against forecast
-            ListView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: forecastData.length,
-              itemBuilder: (context, index) {
-                return _buildForecastRow(forecastData[index], index);
-              },
-            ),
-          ],
-        ),
-      ),
+  void initState() {
+    super.initState();
+    _fadeController = AnimationController(
+      duration: const Duration(milliseconds: 1000),
+      vsync: this,
+    );
+    _slideController = AnimationController(
+      duration: const Duration(milliseconds: 800),
+      vsync: this,
+    );
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _fadeController, curve: Curves.easeOut),
+    );
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0, 0.3),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(parent: _slideController, curve: Curves.easeOutBack));
+    _fadeController.forward();
+    _slideController.forward();
+  }
+
+  @override
+  void dispose() {
+    _fadeController.dispose();
+    _slideController.dispose();
+    super.dispose();
+  }
+
+  void _showDayDetails(BuildContext context, int index) {
+    final data = forecastData[index];
+    setState(() {
+      _selectedIndex = index;
+    });
+    HapticFeedback.lightImpact();
+    
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => _buildDayDetailSheet(data),
     );
   }
 
-  Widget _buildForecastRow(Map<String, dynamic> data, int index) {
-    final isSelected = _selectedIndex == index;
-    final int minWeekTemp = forecastData.map<int>((d) => d['low']).reduce(min);
-    final int maxWeekTemp = forecastData.map<int>((d) => d['high']).reduce(max);
-
-    double topPadding = (index == 0) ? 0.0 : 10.0;
-
-
-    return GestureDetector(
-      onTap: () {
-        setState(() {
-          _selectedIndex = isSelected ? null : index;
-        });
-      },
-      child: AnimatedSize(
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
-        child: Column(
-          children: [
-            Padding(
-              padding: EdgeInsets.only(top: topPadding, bottom: 10.0), // Tight vertical padding for compact look
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    flex: 3,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(data['day'], style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w500)),
-                        Text(data['date'], style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 14)),
-                      ],
-                    ),
-                  ),
-                  Expanded(flex: 2, child: Icon(data['icon'] as IconData, color: Colors.white, size: 28)),
-                  Expanded(flex: 2, child: Text("${data['low']}°", style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 16))),
-                  Expanded(flex: 5, child: _buildTempBar(data['low'], data['high'], minWeekTemp, maxWeekTemp)),
-                  Expanded(flex: 2, child: Text("${data['high']}°", textAlign: TextAlign.right, style: const TextStyle(color: Colors.white, fontSize: 16))),
-                  Expanded(
-                    flex: 3,
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        Icon(PhosphorIcons.drop(PhosphorIconsStyle.fill), color: const Color(0xFF00BFFF), size: 16),
-                        const SizedBox(width: 4),
-                        Text("${data['precipitation']}%", style: const TextStyle(color: Colors.white, fontSize: 16)),
-                      ],
-                    ),
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _fadeAnimation,
+      builder: (context, child) {
+        return FadeTransition(
+          opacity: _fadeAnimation,
+          child: SlideTransition(
+            position: _slideAnimation,
+            child: Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(20),
+                gradient: LinearGradient(
+                  colors: [
+                    Colors.orange.withOpacity(0.1),
+                    Colors.red.withOpacity(0.1),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.2),
+                    blurRadius: 15,
+                    offset: const Offset(0, 8),
                   ),
                 ],
               ),
-            ),
-            if (isSelected) _buildExpandedView(data['details']),
-            if (index < forecastData.length - 1)
-              const Divider(color: Colors.white24, thickness: 0.5, height: 0.5), // thin divider, small height
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTempBar(int low, int high, int minWeekTemp, int maxWeekTemp) {
-    final double totalWeekRange = (maxWeekTemp - minWeekTemp).toDouble();
-    if (totalWeekRange <= 0) return const SizedBox.shrink();
-
-    final double dayRange = (high - low).toDouble();
-    final double startOffset = (low - minWeekTemp) / totalWeekRange;
-    final double widthFactor = dayRange / totalWeekRange;
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8.0),
-      child: Container(
-        height: 6,
-        decoration: BoxDecoration(
-          color: Colors.grey[900],
-          borderRadius: BorderRadius.circular(3),
-        ),
-        child: Stack(
-          children: [
-            Align(
-              alignment: Alignment.centerLeft,
-              child: Padding(
-                padding: EdgeInsets.only(left: MediaQuery.of(context).size.width * 0.15 * startOffset),
-                child: FractionallySizedBox(
-                  widthFactor: widthFactor,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Colors.cyan, Colors.yellow, Colors.orange],
-                      ),
-                      borderRadius: BorderRadius.circular(3),
-                    ),
+              child: Card(
+                elevation: 0,
+                color: Colors.transparent,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                child: Padding(
+                  padding: const EdgeInsets.all(20.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildHeader(),
+                      const SizedBox(height: 20),
+                      _buildForecastList(),
+                    ],
                   ),
                 ),
               ),
             ),
-          ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildHeader() {
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: Colors.orange.withOpacity(0.2),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: const Icon(
+            Icons.calendar_today,
+            color: Colors.orange,
+            size: 20,
+          ),
         ),
+        const SizedBox(width: 12),
+        const Text(
+          "7-DAY FORECAST",
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 14,
+            fontWeight: FontWeight.bold,
+            letterSpacing: 1.2,
+          ),
+        ),
+        const Spacer(),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          decoration: BoxDecoration(
+            color: Colors.orange.withOpacity(0.2),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.orange.withOpacity(0.3)),
+          ),
+          child: const Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.trending_up,
+                color: Colors.orange,
+                size: 12,
+              ),
+              SizedBox(width: 4),
+              Text(
+                "7D",
+                style: TextStyle(
+                  color: Colors.orange,
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildForecastList() {
+    return Column(
+      children: forecastData.asMap().entries.map((entry) {
+        final index = entry.key;
+        final data = entry.value;
+        final isSelected = _selectedIndex == index;
+        
+        return GestureDetector(
+          onTap: () => _showDayDetails(context, index),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 300),
+            margin: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              gradient: LinearGradient(
+                colors: [
+                  isSelected 
+                      ? Colors.orange.withOpacity(0.2)
+                      : Colors.white.withOpacity(0.05),
+                  isSelected 
+                      ? Colors.red.withOpacity(0.1)
+                      : Colors.white.withOpacity(0.02),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              border: Border.all(
+                color: isSelected 
+                    ? Colors.orange.withOpacity(0.4)
+                    : Colors.white.withOpacity(0.1),
+                width: isSelected ? 2 : 1,
+              ),
+              boxShadow: isSelected ? [
+                BoxShadow(
+                  color: Colors.orange.withOpacity(0.2),
+                  blurRadius: 8,
+                  offset: const Offset(0, 4),
+                ),
+              ] : null,
+            ),
+            child: Row(
+              children: [
+                _buildDayInfo(data),
+                const SizedBox(width: 16),
+                _buildWeatherIcon(data),
+                const SizedBox(width: 16),
+                Expanded(child: _buildTemperatureBar(data)),
+                const SizedBox(width: 16),
+                _buildPrecipitationInfo(data),
+              ],
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _buildDayInfo(Map<String, dynamic> data) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          data["day"] as String,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        Text(
+          data["date"] as String,
+          style: TextStyle(
+            color: Colors.white.withOpacity(0.7),
+            fontSize: 12,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildWeatherIcon(Map<String, dynamic> data) {
+    return Container(
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Icon(
+        data["icon"] as IconData,
+        color: const Color(0xFF00C3FF),
+        size: 24,
       ),
     );
   }
 
-  Widget _buildExpandedView(Map<String, dynamic> details) {
-    return Padding(
-      padding: const EdgeInsets.only(top: 8.0),  // Reduced padding for expanded content
+  Widget _buildTemperatureBar(Map<String, dynamic> data) {
+    final high = data["high"] as int;
+    final low = data["low"] as int;
+    final range = high - low;
+    final maxRange = 20.0; // Assuming max temp range is 20 degrees
+    
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              "${high}°",
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            Text(
+              "${low}°",
+              style: TextStyle(
+                color: Colors.white.withOpacity(0.7),
+                fontSize: 14,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Container(
+          height: 6,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(3),
+            gradient: LinearGradient(
+              colors: [
+                Colors.red.withOpacity(0.8),
+                Colors.orange.withOpacity(0.8),
+                Colors.yellow.withOpacity(0.8),
+                Colors.green.withOpacity(0.8),
+                Colors.blue.withOpacity(0.8),
+              ],
+            ),
+          ),
+          child: FractionallySizedBox(
+            alignment: Alignment.centerLeft,
+            widthFactor: (range / maxRange).clamp(0.0, 1.0),
+            child: Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(3),
+                color: Colors.white.withOpacity(0.3),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPrecipitationInfo(Map<String, dynamic> data) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              PhosphorIcons.drop(PhosphorIconsStyle.fill),
+              color: const Color(0xFF00BFFF),
+              size: 16,
+            ),
+            const SizedBox(width: 4),
+            Text(
+              "${data["precipitation"]}%",
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 4),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+          decoration: BoxDecoration(
+            color: Colors.blue.withOpacity(0.2),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: const Text(
+            "Rain",
+            style: TextStyle(
+              color: Colors.blue,
+              fontSize: 10,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDayDetailSheet(Map<String, dynamic> data) {
+    return Container(
+      decoration: const BoxDecoration(
+        color: Color(0xFF1B1B1D),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 40,
+            height: 4,
+            margin: const EdgeInsets.only(top: 12),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.3),
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Text(
+                      data["day"] as String,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      data["date"] as String,
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.7),
+                        fontSize: 18,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                _buildDetailForecast(data),
+                const SizedBox(height: 20),
+                _buildDayNightDetails(data),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDetailForecast(Map<String, dynamic> data) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        gradient: LinearGradient(
+          colors: [
+            Colors.orange.withOpacity(0.1),
+            Colors.red.withOpacity(0.1),
+          ],
+        ),
+        border: Border.all(color: Colors.orange.withOpacity(0.3)),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            details['forecast'],
-            style: const TextStyle(color: Colors.white, fontSize: 14),
-          ),
-          const Divider(color: Colors.white24, thickness: 0.5, height: 16),
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _buildDayNightDetail("Day", details['day']),
-              _buildDayNightDetail("Night", details['night']),
+              Icon(
+                data["icon"] as IconData,
+                color: const Color(0xFF00C3FF),
+                size: 32,
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Text(
+                  data["details"]["forecast"] as String,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                  ),
+                ),
+              ),
             ],
           ),
         ],
@@ -241,23 +530,75 @@ class _SevenDayForecastCardState extends State<SevenDayForecastCard> {
     );
   }
 
-  Widget _buildDayNightDetail(String title, Map<String, dynamic> data) {
-    return Column(
+  Widget _buildDayNightDetails(Map<String, dynamic> data) {
+    return Row(
       children: [
-        Text(title, style: TextStyle(color: Colors.white.withOpacity(0.7), fontWeight: FontWeight.bold)),
-        const SizedBox(height: 8),
-        Icon(data['icon'] as IconData, color: Colors.white, size: 28),
-        const SizedBox(height: 8),
-        Text(data['condition'], style: const TextStyle(color: Colors.white)),
-        const SizedBox(height: 8),
-        Row(
-          children: [
-            Icon(PhosphorIcons.drop(PhosphorIconsStyle.fill), color: const Color(0xFF00BFFF), size: 14),
-            const SizedBox(width: 4),
-            Text("${data['precipitation']}%", style: const TextStyle(color: Colors.white)),
-          ],
+        Expanded(
+          child: _buildTimeDetail("Day", data["details"]["day"]),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: _buildTimeDetail("Night", data["details"]["night"]),
         ),
       ],
+    );
+  }
+
+  Widget _buildTimeDetail(String time, Map<String, dynamic> detail) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        color: Colors.white.withOpacity(0.05),
+        border: Border.all(color: Colors.white.withOpacity(0.1)),
+      ),
+      child: Column(
+        children: [
+          Text(
+            time,
+            style: TextStyle(
+              color: Colors.white.withOpacity(0.7),
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Icon(
+            detail["icon"] as IconData,
+            color: const Color(0xFF00C3FF),
+            size: 32,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            detail["condition"] as String,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                PhosphorIcons.drop(PhosphorIconsStyle.fill),
+                color: const Color(0xFF00BFFF),
+                size: 14,
+              ),
+              const SizedBox(width: 4),
+              Text(
+                "${detail["precipitation"]}%",
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 12,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }
